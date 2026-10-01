@@ -1,0 +1,78 @@
+# ============ 依赖与构建产物 ============
+node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+build_release/
+
+# ============ 运行产物 ============
+logs/
+*.log
+# 本地/测试环境版本标记（打包版由构建脚本写入自己目录的 version.txt）
+version.txt
+# 地牢运行时存档（run_state/进度，按需 gitignore；不传远端）
+data/
+
+# ============ 隐私与密钥（绝不入库） ============
+# 含 API 密钥与个人安全配置
+config/config.yaml
+# 含个人角色设定（NSFW）
+config/character.yaml
+# 配件与强度基准（NSFW）
+config/device_channels.yaml
+# 风格版本/昵称运行时覆盖
+config/character_runtime.yaml
+config/mobile_preferences.json
+config/mobile_preferences.tmp
+# 配置文件备份
+*.bak
+.env
+*.pem
+
+# ============ 私有内容包与生产工具（不上传） ============
+# 调教版提示词/语料（NSFW，私发内容包）
+content/pack/
+# 蒸馏/反推等生产工具
+tools/
+
+# ============ 个人素材与本地大模型 ============
+素材/
+ollama/
+
+# ============ IDE ============
+.vscode/
+.idea/
+
+# Android build output, local SDK paths and signing material
+.gradle/
+android/**/build/
+android/local.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+signing.properties
+*.signing.properties
+*.apk
+*.aab
+
+# User-created roles, imports, screenshots and test recordings
+config/custom_roles.yaml
+config/imported-pulses/
+content/custom-roles/
+.test-artifacts/
+*.zip
+.env.*
+!.env.example
+# ===== public-push isolation (2026-09-03): NSFW role content & dungeon story assets stay local =====
+# R18 内容一律不随主仓库/主发布包分发，只走 DLC 大包（zh/en）由用户自行导入
+content/roles/
+content/pure/
+content/pack/
+backend/story_pack/
+_t032_*
+_t048_*
+_t058_*
+_t061_*
+_t063_*

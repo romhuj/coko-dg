@@ -1,0 +1,34 @@
+Offline voice recognition components
+
+sherpa-onnx v1.13.8
+Copyright Xiaomi Corporation and sherpa-onnx contributors.
+Source: https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
+Android AAR: https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar
+SHA256: 633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96
+License: Apache License 2.0; see licenses/sherpa-onnx-LICENSE.txt.
+
+SenseVoiceSmall by FunAudioLLM / Alibaba Group
+Original model: https://huggingface.co/FunAudioLLM/SenseVoiceSmall
+ONNX conversion: csukuangfj / sherpa-onnx
+Converted model revision: 2365baeacb507f821a0c8120fcee3d484dba7a07
+https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tree/2365baeacb507f821a0c8120fcee3d484dba7a07
+model.int8.onnx: 239233841 bytes
+SHA256: c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51
+tokens.txt: 315894 bytes
+SHA256: f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc
+Model weights are licensed under the FunASR Model Open Source License Agreement v1.1,
+not the source-code license; see licenses/SenseVoice-FunASR-MODEL_LICENSE.txt.
+Original model license: https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE
+
+Silero VAD by Silero Team
+Source: https://github.com/snakers4/silero-vad
+Distributed model: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
+silero_vad.onnx: 643854 bytes
+SHA256: 9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6
+License: MIT; see licenses/silero-vad-LICENSE.txt.
+
+The small Silero VAD fallback is downloaded and verified at build time, then
+copied from the APK into private storage and verified again on first use.
+The ASR model and tokens are downloaded individually on first use and verified
+against the pinned SHA256 values. Microphone audio is processed on the device and is
+not uploaded by this engine. Text is delivered to the app's chat input flow.

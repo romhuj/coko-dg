@@ -1,0 +1,52 @@
+Offline Chinese reply voices
+===========================
+
+kokoro-zf_001: Kokoro-82M-v1.1-zh, speaker zf_001, sherpa speaker ID 3.
+kokoro-zm_010: Kokoro-82M-v1.1-zh, speaker zm_010, sherpa speaker ID 59.
+Original model and Apache-2.0 model card:
+https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh
+The model author states its Chinese professional speech dataset was provided
+with permission by LongMaoData. These are the model's published Chinese voices,
+not user-provided or celebrity voice clones.
+Pinned ONNX conversion:
+https://huggingface.co/csukuangfj/kokoro-int8-multi-lang-v1_1/tree/155831f1b4ba23b1f5c058be6a61df90cefb2a37
+Model license: licenses/Kokoro-Apache-2.0.txt
+
+melo-zh: MeloTTS-Chinese, speaker ZH, sherpa speaker ID 0.
+Original MIT model card:
+https://huggingface.co/myshell-ai/MeloTTS-Chinese
+Pinned ONNX conversion:
+https://huggingface.co/csukuangfj/vits-melo-tts-zh_en/tree/a0d5c6a264c0ef92d70d8661d8cc502d79627cd6
+Model license: licenses/MeloTTS-MIT.txt
+
+The adjacent JSON manifests pin the complete installed resource set using
+repository revision, exact byte count and SHA-256 for every file. Only the
+int8 weights are used. Kokoro shares one model and voice bank between both
+Chinese speaker IDs. Dictionary directories obsolete in sherpa-onnx 1.13.8
+and the unused British English lexicon are omitted.
+
+Native dependency licensing
+---------------------------
+sherpa-onnx source is Apache-2.0. Its 1.13.8 TTS build additionally links
+piper-phonemize and eSpeak NG. The Kokoro resource set includes eSpeak NG data.
+The complete TTS distribution must therefore not be described as solely
+Apache/MIT. The eSpeak NG GPL terms also apply to the relevant bundled
+dependency; retaining a notice alone does not replace those terms.
+
+Exact sherpa-onnx 1.13.8 dependency declarations and corresponding sources:
+https://github.com/k2-fsa/sherpa-onnx/blob/v1.13.8/cmake/piper-phonemize.cmake
+https://github.com/csukuangfj/piper-phonemize/tree/f3ff95afc03640bc1399e113e83361192a2fafb4
+https://github.com/csukuangfj/espeak-ng/tree/7251208ee427ef87e94f39d0e99b15d287224ed6
+Licenses: licenses/piper-phonemize-MIT.txt and licenses/espeak-ng-GPL-3.0.txt
+Upstream discussion of removing the GPL dependency in a future major release:
+https://github.com/k2-fsa/sherpa-onnx/issues/3731
+
+Official voice examples and speaker mapping:
+https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese-English/kokoro-multi-lang-v1_1.html
+https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/vits.html#vits-melo-tts-zh-en-chinese-english-1-speaker
+
+Runtime resource sizes (bytes):
+Kokoro full selected set: 194382466; on-demand weights + voice bank: 168089730.
+MeloTTS full selected set: 60591049; on-demand int8 weights: 53517430.
+Small support files are compressed into APK assets at build time and checked
+against the same manifests when installed. Reply text and PCM remain local.

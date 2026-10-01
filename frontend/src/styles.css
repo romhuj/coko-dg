@@ -1,0 +1,450 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #101010;
+  --color-ink2: #151515;
+  --color-ink3: #1c1c1c;
+  --color-panel: #202020;
+  --color-panel2: #252525;
+  --color-field: #161616;
+  --color-line: rgba(255, 255, 255, 0.14);
+  --color-line2: rgba(247, 217, 122, 0.45);
+  --color-accent: #ffe59a;
+  --color-accent2: #f7d97a;
+  --color-text: #f2f2f2;
+  --color-muted: #a8a8a8;
+  --color-faint: #6e6e6e;
+  --color-ok: #4fc3f7;
+  --color-warn: #ffc966;
+  --color-bad: #ff5470;
+  --color-arcane: #b98cf2;
+  --color-arcane2: #8a5fd6;
+  /* 紫金地牢 D7：三轴条色（淫化 / 恶堕沿用 arcane / 魔化） */
+  --color-lust: #ff7ab8;
+  --color-demon: #d65cff;
+  --color-vital: #ff8a9e;
+  --font-sans: "Inter", "Noto Sans SC", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+/* 紫金地牢：入口渐变描边（未点击时就有；无外发光，30% 淡色） */
+.dungeon-entry {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(21, 21, 21, 0.85), rgba(21, 21, 21, 0.85)) padding-box,
+    linear-gradient(135deg, rgba(185, 140, 242, 0.3), rgba(247, 217, 122, 0.3), rgba(185, 140, 242, 0.3)) border-box;
+}
+/* 紫金地牢：激活态（边框稍亮，无外发光） */
+.dungeon-glow {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(38, 38, 38, 0.95), rgba(38, 38, 38, 0.95)) padding-box,
+    linear-gradient(135deg, rgba(200, 166, 255, 0.55), rgba(255, 229, 154, 0.55), rgba(200, 166, 255, 0.55)) border-box;
+}
+/* 紫金地牢：面板柔和紫金光晕 */
+.dungeon-frame {
+  box-shadow:
+    inset 0 0 0 1px rgba(185, 140, 242, 0.28),
+    0 0 24px rgba(185, 140, 242, 0.16);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+::selection {
+  background: rgba(247, 217, 122, 0.3);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-ink3);
+  outline: none;
+  margin: 12px 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--color-accent);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--color-accent);
+  border: none;
+  cursor: pointer;
+}
+
+/* ---------- 滚动条 ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(247, 217, 122, 0.35) transparent;
+}
+
+/* ---------- 急停长按进度条 ---------- */
+@keyframes estop-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- 新手引导高亮（元素自带边框发光，无坐标偏差） ---------- */
+.tour-glow {
+  box-shadow:
+    0 0 0 3px rgba(247, 217, 122, 0.75),
+    0 0 22px rgba(247, 217, 122, 0.55) !important;
+  transition: box-shadow 0.2s ease;
+}
+.tour-raise {
+  position: relative !important;
+  z-index: 70 !important;
+  pointer-events: none !important;
+}
+.tour-raise-z {
+  z-index: 70 !important;
+  pointer-events: none !important;
+}
+
+/* ---------- 紫金地牢 D7：深渊剖面当前节点脉动 / 掷点入场 ---------- */
+@keyframes dg-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 229, 154, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 229, 154, 0); }
+}
+.dg-current {
+  animation: dg-pulse 1.8s ease-out infinite;
+}
+@keyframes dg-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.dg-rise {
+  animation: dg-rise 0.35s ease-out both;
+}
+/* 深渊层带底色：越深越紫 */
+.dg-strata {
+  background: linear-gradient(180deg, rgba(32, 32, 32, 0.9) 0%, rgba(44, 30, 64, 0.9) 100%);
+}
+
+
+/* ---------- D29 深渊路网 RouteMap（fable D26） ---------- */
+@keyframes dg-breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.dg-breathe {
+  animation: dg-breathe 2.4s ease-in-out infinite;
+}
+@keyframes dg-flow-dash {
+  to { stroke-dashoffset: -28; }
+}
+.dg-flow {
+  animation: dg-flow-dash 20s linear infinite;
+}
+@keyframes dg-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+.dg-shake {
+  animation: dg-shake 0.2s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-breathe,
+  .dg-flow,
+  .dg-current,
+  .dg-rise,
+  .dg-shake,
+  .dg-leave-flash {
+    animation: none !important;
+  }
+}
+
+/* ---------- D30 深渊路网 · mid/窄底部抽屉 ---------- */
+@keyframes dg-sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.dg-sheet-up {
+  animation: dg-sheet-up 0.28s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-sheet-up {
+    animation: none !important;
+  }
+}
+
+/* ---------- D34 chain 剖面 Boss/结局/走过闪 ---------- */
+.dg-boss-chip {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-demon) 55%, transparent),
+    0 0 8px color-mix(in srgb, var(--color-demon) 35%, transparent);
+  padding-inline: 0.4rem;
+  padding-block: 0.2rem;
+}
+.dg-ending-chip {
+  clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%);
+  border-radius: 2px;
+  border-color: color-mix(in srgb, var(--color-arcane2, var(--color-arcane)) 70%, transparent);
+  background: color-mix(in srgb, var(--color-arcane) 18%, transparent);
+}
+@keyframes dg-leave-flash {
+  0% { border-color: var(--color-accent); box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 50%, transparent); }
+  100% { border-color: inherit; box-shadow: none; }
+}
+.dg-leave-flash {
+  animation: dg-leave-flash 0.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dg-leave-flash {
+    animation: none !important;
+  }
+}
+
+
+/* ---------- D35 地图自适应填满（column fit-scale；默认 = D34 尺寸） ---------- */
+.dg-fit-scale {
+  --dg-fit-s: 1;
+  --dg-chip-fs: 11px;
+  --dg-chip-px: 0.375rem;
+  --dg-chip-py: 0.125rem;
+  --dg-chip-gap: 0.375rem;
+  --dg-row-py: 0.375rem;
+  --dg-band-fs: 10px;
+  --dg-band-tier-fs: 13px;
+  --dg-icon-size: 11px;
+  --dg-icon-boss-size: 13px;
+}
+.dg-chip {
+  font-size: var(--dg-chip-fs, 11px);
+  padding-inline: var(--dg-chip-px, 0.375rem);
+  padding-block: var(--dg-chip-py, 0.125rem);
+}
+.dg-chip-row {
+  gap: var(--dg-chip-gap, 0.375rem);
+}
+.dg-band-row {
+  padding-block: var(--dg-row-py, 0.375rem);
+}
+.dg-band-label {
+  font-size: var(--dg-band-fs, 10px);
+}
+.dg-band-tier {
+  font-size: var(--dg-band-tier-fs, 13px);
+}
+
+/* Android v5. The host applies system-bar and keyboard insets. */
+body.coyote-android {
+ --color-ink:#0c0c0d;--color-ink2:#0c0c0d;--color-ink3:#1c1c1c;--color-panel:#222;--color-panel2:#2b2b2b;
+ --color-field:#222;--color-line:#383838;--color-line2:#ffe89c70;--color-accent:#ffe89c;--color-accent2:#ebc96c;
+ --color-text:#fcfcfc;--color-muted:#b2b2b2;--color-faint:#929292;--color-bad:#ffb4bc;
+ background:var(--color-ink);color:var(--color-text);color-scheme:dark;
+}
+.android-shell{box-sizing:border-box;display:flex;flex-direction:column;width:100%;overflow:hidden;background:var(--color-ink);touch-action:pan-y pinch-zoom}
+.coyote-android button,.coyote-android a,.coyote-android summary{-webkit-tap-highlight-color:transparent}
+.coyote-android button:disabled{cursor:default;opacity:.4}
+.coyote-android :focus-visible{outline:2px solid var(--color-accent);outline-offset:3px}
+.android-header{flex:none;height:64px;min-height:64px;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;gap:10px}
+.android-header h1{flex:1;font-size:22px;font-weight:600}
+.android-icon{display:grid;place-items:center;min-width:48px;width:48px;height:48px;flex:none;border:0;background:transparent}
+.android-header-spacer{width:48px;height:48px;flex:none}
+.android-tabs{display:flex;height:44px;align-items:center;gap:22px}
+.android-tabs button{min-height:48px;position:relative;font-size:18px;color:var(--color-muted)}
+.android-tabs button[aria-current="page"]{color:var(--color-text);font-weight:600}
+.android-tabs button[aria-current="page"]:after{content:"";position:absolute;height:3px;border-radius:2px;background:var(--color-accent);left:9px;right:9px;bottom:3px}
+.android-estop{position:fixed;z-index:2000;top:8px;right:12px;display:grid;place-items:center;width:48px;height:48px;background:#3b2228;border:1px solid #73414a;border-radius:14px;color:var(--color-bad);touch-action:manipulation}
+.android-estop-center{position:absolute}
+.android-body{min-height:0;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.android-chat-page{min-height:0;flex:1;display:flex;flex-direction:column}
+.android-chat-page.hidden{display:none}
+.android-context{flex:none;padding:2px 25px 0;display:flex;align-items:center;gap:10px;justify-content:space-between;min-height:44px}
+.android-role-context{min-height:44px;display:flex;align-items:center;gap:3px;font-size:13px;color:var(--color-muted);text-align:left}
+.android-protection{min-height:44px;font-size:11px;color:var(--color-bad);white-space:nowrap}
+.android-setup{margin:0 25px 4px;display:flex;align-items:center;gap:10px;flex:none;justify-content:space-between;font-size:12px;color:var(--color-muted)}
+.android-setup button{min-height:44px;display:flex;align-items:center;color:var(--color-accent);white-space:nowrap}
+.android-chat-host{flex:1;min-height:0}
+.android-chat-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 25px 20px;display:flex;flex-direction:column;gap:23px}
+.android-chat-empty{margin:auto 0;color:var(--color-muted);text-align:center;font-size:15px;line-height:1.8}
+.android-message{flex:none;font-size:16px;line-height:1.85;overflow-wrap:anywhere}
+.android-message.ai{align-self:stretch;padding:0 1px}
+.android-message.user{align-self:flex-end;max-width:88%;padding:12px 18px;border-radius:21px 21px 6px 21px;background:#29271f;color:#f4ecd4}
+.android-message.sys{align-self:stretch;font-size:12px;line-height:1.7;color:var(--color-muted);padding:4px 0}
+.android-chat-busy{font-size:12px;color:var(--color-muted);line-height:1.7}
+.android-action-summary{color:var(--color-muted);font-size:11px;margin-top:8px}
+.android-action-summary summary{min-height:32px;cursor:pointer}
+.android-command-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.android-command-chip{display:inline-flex;align-items:center;min-height:34px;max-width:100%;padding:5px 10px;border:1px solid #579f716e;border-radius:8px;background:#68bb8212;color:#9ddab0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.android-command-other{margin-top:9px;color:var(--color-muted);font-size:11px;line-height:1.7}
+.android-command-other summary{min-height:32px;cursor:pointer}
+.android-turn-status{color:var(--color-muted);font-size:12px;line-height:1.8;padding:3px 0}
+.android-turn-error{color:var(--color-bad);font-size:12px;line-height:1.8}
+.android-resume-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--color-muted);font-size:11px;line-height:1.7}
+.android-resume-hint button{flex:none;min-width:48px;min-height:44px;color:var(--color-accent);font-size:12px;padding:0 7px}
+.android-chat-recovery{color:var(--color-muted);font-size:12px;line-height:1.7;padding:6px 0}
+.android-composer{flex:none;padding:0 18px 12px;background:var(--color-ink)}
+.android-composer-tools{display:flex;align-items:center;gap:8px;min-height:48px}
+.android-voice-chip,.android-speech-chip{display:inline-flex;align-items:center;justify-content:center;position:relative;isolation:isolate;width:48px;min-width:48px;height:48px;border:0;border-radius:8px;background:none;color:var(--color-muted)}
+.android-voice-chip:before,.android-speech-chip:before{content:"";position:absolute;z-index:-1;inset:7px 0;border:1px solid var(--color-line);border-radius:8px}
+.android-speech-chip[aria-pressed="true"]{color:var(--color-accent)}
+.android-speech-chip[aria-pressed="true"]:before{background:#ffe89c15;border-color:#ffe89c70}
+.android-voice-chip[data-listening="true"]{color:#9cddb1}
+.android-voice-chip[data-listening="true"]:before{background:#6ebd8815;border-color:#6ebd8870}
+.android-voice-chip:disabled{opacity:.45}
+.android-voice-glyph{display:flex;align-items:center;justify-content:center;gap:3px}
+.android-voice-meter{display:flex;align-items:center;gap:2px;height:20px}
+.android-voice-meter i{display:block;width:2px;height:20px;border-radius:2px;background:currentColor;transform:scaleY(calc(.15 + var(--voice-level,0) * .65));transition:transform 90ms linear}
+.android-voice-meter i:nth-child(2){transform:scaleY(calc(.2 + var(--voice-level,0) * .8))}
+.android-voice-meter i:nth-child(3){transform:scaleY(calc(.15 + var(--voice-level,0) * .5))}
+.android-voice-preview{width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none;color:var(--color-muted);font-size:12px;line-height:22px;padding-top:3px}
+.android-voice-preview::-webkit-scrollbar{display:none}
+@media(prefers-reduced-motion:reduce){.android-voice-meter i{transition:none}.android-voice-chip .animate-spin{animation:none}}
+.android-voice-status{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--color-muted);font-size:11px;line-height:1.7;padding:2px 0 5px}
+.android-voice-status progress{flex:1;min-width:80px;max-width:180px;height:4px;accent-color:#9cddb1}
+.android-voice-status button,.android-pending-confirm button,.android-voice-review button{min-height:36px;padding:4px 10px;color:var(--color-accent);font-size:12px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-panel)}
+.android-pending-confirm{display:flex;align-items:center;gap:8px;padding:4px 0 8px;font-size:12px;color:var(--color-muted)}
+.android-pending-confirm p{flex:1;min-width:0;max-height:64px;overflow:auto;overflow-wrap:anywhere}
+.android-pending-confirm button{flex:none}
+.android-voice-review{display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow:auto;margin:4px 0 8px;padding:10px;border:1px solid var(--color-line);border-radius:10px;background:var(--color-panel);font-size:12px}
+.android-voice-review label{color:var(--color-text)}
+.android-voice-review p{color:var(--color-muted);line-height:1.6;overflow-wrap:anywhere}
+.android-voice-review textarea{width:100%;min-height:64px;max-height:120px;resize:vertical;padding:8px;border:1px solid var(--color-line);border-radius:8px;background:var(--color-ink);color:var(--color-text);font-size:13px}
+.android-voice-review>div{display:flex;gap:8px}
+.android-pending-confirm button:disabled,.android-voice-review button:disabled{opacity:.45}
+.android-auto-chip{display:inline-flex;align-items:center;gap:5px;position:relative;isolation:isolate;min-height:48px;height:48px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--color-muted);font-size:12px;white-space:nowrap}
+.android-auto-chip:before{content:"";position:absolute;z-index:-1;inset:7px 0;border:1px solid var(--color-line);border-radius:8px}
+.android-auto-chip[aria-checked="true"]{color:var(--color-accent)}
+.android-auto-chip[aria-checked="true"]:before{background:#ffe89c15;border-color:#ffe89c70}
+.android-compose-box{display:flex;align-items:flex-end;gap:8px;padding:6px 8px 6px 17px;background:var(--color-panel);border-radius:12px;border:1px solid #303030}
+.android-compose-box textarea{resize:none;min-height:48px;height:48px;max-height:104px;min-width:0;flex:1;border:0;outline:none;background:transparent;padding:12px 0;font-size:15px;line-height:24px;color:var(--color-text)}
+.android-compose-box textarea::placeholder{color:var(--color-muted)}
+.coyote-android .android-compose-box textarea:focus-visible{outline:none}
+.android-compose-box:focus-within{border-color:var(--color-accent)}
+.android-send{width:44px;min-width:44px;height:48px;display:grid;place-items:center;border-radius:50%;color:var(--color-ink);position:relative;isolation:isolate}
+.android-send:before{content:"";position:absolute;z-index:-1;inset:5px 3px;background:var(--color-accent);border-radius:50%}
+.android-compose-error{color:var(--color-bad);font-size:12px;line-height:1.7;overflow-wrap:anywhere;padding:6px 0}
+.android-page{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 25px 28px}
+.android-page-title{display:flex;gap:3px;align-items:center;margin:0 0 18px -12px}
+.android-page-title h1{font-size:25px;font-weight:600}
+.android-role-row{width:100%;display:flex;text-align:left;align-items:center;gap:13px;min-height:81px;padding:15px 0;border-bottom:1px solid var(--color-line)}
+.android-role-swipe{position:relative;overflow:hidden;border-bottom:1px solid var(--color-line);touch-action:pan-y}
+.android-role-swipe .android-role-row{position:relative;background:var(--color-ink);border-bottom:0;transition:transform .18s ease}
+.android-role-swipe.revealed .android-role-row{transform:translateX(-152px)}
+.android-role-actions{position:absolute;right:0;top:0;bottom:0;display:grid;grid-template-columns:76px 76px}
+.android-role-actions button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;min-height:48px}
+.android-role-pin{color:var(--color-accent);background:#ffe89c12}
+.android-role-delete{color:var(--color-bad);background:#ff81901a}
+.android-role-pinned-indicator{display:inline;margin-left:6px;color:var(--color-accent);vertical-align:middle}
+.android-role-delete-overlay{position:fixed;inset:64px 0 0;z-index:100;display:flex;align-items:center;justify-content:center;padding:22px;background:#0009}
+.android-role-delete-dialog{width:100%;max-width:420px;max-height:100%;overflow-y:auto;background:var(--color-panel);border:1px solid var(--color-line);border-radius:20px;padding:22px}
+.android-role-delete-dialog h2{font-size:18px;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.android-role-delete-dialog p{font-size:13px;line-height:1.8;color:var(--color-muted);margin-top:13px}
+.android-role-delete-buttons{display:flex;gap:8px;margin-top:20px}
+.android-role-delete-buttons button{flex:1}
+.android-button.danger{color:var(--color-bad);border-color:#ff819066;background:#ff819014}
+@media(prefers-reduced-motion:reduce){.android-role-swipe .android-role-row{transition:none}}
+.android-role-avatar{width:44px;height:44px;flex:none;border-radius:50%;background:var(--color-panel);color:var(--color-accent);display:grid;place-items:center;font-size:16px}
+.android-role-copy{min-width:0;flex:1}
+.android-role-copy strong{display:block;font-size:16px;font-weight:500}
+.android-role-copy small{display:block;font-size:12px;line-height:1.7;color:var(--color-muted);margin-top:4px}
+.android-role-search,.android-button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid var(--color-line);border-radius:12px;padding:10px 16px;font-size:14px}
+.android-role-search{margin-top:18px;width:100%}
+.android-strength{border-top:1px solid var(--color-line);margin-top:25px}
+.android-strength-heading{min-height:64px;display:flex;align-items:center;justify-content:space-between}
+.android-strength-heading h3{font-size:16px;font-weight:500}
+.android-strength-heading span{color:var(--color-muted);font-size:13px}
+.android-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.android-level{min-height:48px;border:1px solid var(--color-line);border-radius:10px;font-size:14px}
+.android-level.active{background:var(--color-accent);color:var(--color-ink);border-color:var(--color-accent);font-weight:600}
+.android-strength-note,.android-role-status,.android-small{font-size:12px;line-height:1.8;color:var(--color-muted);margin:13px 0}
+.android-settings h2{font-size:15px;font-weight:500;margin:14px 0 22px}
+.android-field-label{display:block;font-size:12px;color:var(--color-muted);margin:18px 0 9px}
+.android-field{display:block;width:100%;min-height:52px;background:var(--color-panel);color:var(--color-text);border:1px solid var(--color-line);border-radius:12px;padding:12px 14px;font-size:14px}
+.android-key-label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--color-muted);margin-top:8px}
+.android-key-label a{display:flex;align-items:center;color:var(--color-accent);min-height:48px;padding:0 3px}
+.android-form-actions{display:flex;gap:10px;margin:18px 0 25px}
+.android-form-actions button{flex:1}
+.android-button.primary{background:var(--color-accent);color:var(--color-ink);border-color:var(--color-accent);font-weight:500}
+.android-fold{border-top:1px solid var(--color-line)}
+.android-fold summary{display:flex;align-items:center;min-height:64px;list-style:none;font-size:15px;cursor:pointer}
+.android-fold summary:after{content:"+";margin-left:auto;color:var(--color-muted);font-size:19px}
+.android-fold[open] summary:after{content:"−"}
+.android-fold summary::-webkit-details-marker{display:none}
+.android-setting-row{display:flex;justify-content:space-between;align-items:center;gap:15px;min-height:52px;font-size:13px}
+.android-setting-row input[type="checkbox"]{width:20px;height:20px;accent-color:var(--color-accent)}
+.android-done{width:100%;margin-top:26px}
+.android-device input[type="number"]{appearance:textfield}
+.android-device input[type="number"]::-webkit-inner-spin-button{appearance:none;margin:0}
+.android-drawer-layer{position:fixed;inset:0;z-index:300}
+.android-scrim{position:absolute;inset:0;background:#0009}
+.android-drawer{position:absolute;left:0;top:0;bottom:0;width:min(292px,calc(100% - 84px));background:#171717;border-right:1px solid var(--color-line);display:flex;flex-direction:column;padding:22px 20px 16px;box-shadow:8px 0 30px #0004}
+.android-drawer h2{flex:none;margin:7px 8px 25px;font-size:23px;font-weight:600}
+.android-drawer-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:15px}
+.android-drawer-heading h2{margin:7px 8px}
+.android-menu-nickname{display:block;font-size:12px;line-height:1.6;color:var(--color-muted);max-width:175px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.android-drawer-scroll{min-height:0;flex:1;overflow-y:auto}
+.android-drawer,.android-drawer-scroll,.android-chat-scroll,.android-page,.android-body{touch-action:pan-y pinch-zoom}
+.android-drawer nav button,.android-drawer footer button{width:100%;min-height:54px;display:flex;align-items:center;gap:14px;text-align:left;font-size:16px;padding:0 8px;border-radius:11px}
+.android-drawer nav button:active,.android-drawer footer button:active{background:var(--color-panel)}
+.android-connected{margin:2px 0 18px 44px;padding-left:12px;border-left:1px solid var(--color-line)}
+.android-connected p,.android-history p{font-size:11px;color:var(--color-muted);line-height:1.7;margin-top:5px}
+.android-connected button{display:flex;align-items:center;gap:6px;min-height:44px;font-size:13px;text-align:left}
+.android-dot{width:5px;height:5px;border-radius:50%;background:#98d9ad;flex:none}
+.android-history{border-top:1px solid var(--color-line);padding:17px 8px 14px;margin-top:13px}
+.android-history h3{font-size:12px;color:var(--color-muted);font-weight:400;margin-bottom:10px}
+.android-history button{display:block;max-width:100%;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;padding:10px 12px;min-height:48px;border-radius:10px;font-size:14px;text-align:left;background:var(--color-panel)}
+.android-history button{width:100%;margin-bottom:5px;background:transparent;border:1px solid transparent}
+.android-history button[aria-current="true"]{background:var(--color-panel);border-color:var(--color-line)}
+.android-history button span{display:block;overflow:hidden;text-overflow:ellipsis}
+.android-history button small{display:block;margin-top:3px;color:var(--color-muted);font-size:11px}
+.android-history .android-conversation-row{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.android-history .android-conversation-title{display:flex;align-items:center;gap:6px;min-width:0}.android-conversation-title svg{flex:none;color:var(--color-accent)}
+.android-history .android-conversation-title>span{min-width:0}
+.android-conversation-dialog-name{font-size:14px;line-height:1.6;margin:9px 0 14px;overflow-wrap:anywhere;color:var(--color-muted)}
+.android-conversation-actions{display:grid;gap:7px;margin-top:16px}.android-conversation-actions button{display:flex;align-items:center;gap:12px;min-height:50px;padding:12px;border:1px solid var(--color-line);border-radius:10px;text-align:left}
+.android-button.android-danger{color:#ffc3c3;border-color:#923f3f;background:#542929}
+.android-about-entry{display:flex;align-items:center;justify-content:space-between;width:100%;padding:18px 0;min-height:56px;border-bottom:1px solid var(--color-line);text-align:left;font-size:15px}
+.android-about{display:grid;gap:10px}.android-about a{display:flex;align-items:center;gap:13px;min-height:62px;padding:16px;border:1px solid var(--color-line);border-radius:12px;background:var(--color-panel);font-size:15px}.android-about a span{flex:1}.android-about a:focus-visible,.android-about-entry:focus-visible{outline:2px solid var(--color-accent);outline-offset:3px}
+.android-history-more,.android-history-error button{min-height:48px;color:var(--color-accent);font-size:12px}
+.android-history-error{font-size:12px;line-height:1.8;color:var(--color-muted)}
+.android-dialog-layer{position:fixed;inset:64px 0 0;z-index:1100;padding:20px;display:flex;align-items:center;justify-content:center;background:#000a}
+.android-dialog{width:100%;max-width:390px;max-height:100%;overflow-y:auto;overscroll-behavior:contain;background:var(--color-panel);border:1px solid var(--color-line);border-radius:18px;padding:22px;outline:none}
+.android-dialog h2{font-size:20px;font-weight:600;line-height:1.5}
+.android-dialog-actions{display:flex;gap:10px;margin-top:20px}.android-dialog-actions>*{flex:1}
+.android-dialog-cancel{width:100%;margin-top:10px}
+.android-model-judgment{border-top:1px solid var(--color-line);margin-top:22px;padding-top:8px}
+.android-judgment-switch{width:52px;min-height:48px;display:flex;align-items:center;padding:0 4px;position:relative}
+.android-judgment-switch:before{content:"";position:absolute;inset:10px 0;border-radius:20px;background:var(--color-line)}
+.android-judgment-switch>span{position:relative;width:20px;height:20px;border-radius:50%;background:var(--color-muted)}
+.android-judgment-switch.active:before{background:var(--color-accent)}
+.android-judgment-switch.active>span{margin-left:auto;background:var(--color-ink)}
+.android-judgment-warning{font-size:13px;line-height:1.9;color:var(--color-muted)}
+.android-judgment-warning p{margin-top:13px}
+.android-pair-qr{width:232px;height:232px;max-width:100%;margin:18px auto;padding:12px;border-radius:12px;background:white;color:#333;display:grid;place-items:center;text-align:center;font-size:13px}
+.android-pair-qr img{display:block;width:100%;height:auto;max-height:208px;object-fit:contain}
+.android-pair-actions{display:grid;grid-template-columns:1fr;gap:9px}
+.android-pair-actions .android-small,.android-pair-protection{margin:3px 0;font-size:11px}
+.android-pair-protection{margin-top:12px}
+.android-pair-link{width:100%;min-width:0;resize:none;border:1px solid var(--color-line);border-radius:8px;background:var(--color-ink);font-size:11px;line-height:1.6;padding:8px;color:var(--color-muted);overflow-wrap:anywhere}
+.android-pair-inline .android-small{margin:10px 0}.android-pair-inline>a{margin-top:10px}
+.android-drawer footer{padding-top:8px;border-top:1px solid var(--color-line);flex:none}
+.android-toast{position:fixed;z-index:1800;bottom:130px;left:18px;right:18px;padding:12px 16px;border-radius:14px;color:var(--color-ink);background:var(--color-text);font-size:13px;line-height:1.7;box-shadow:0 6px 20px #0004;pointer-events:none}
+@media(max-height:500px){
+ .android-context,.android-context button{min-height:32px}.android-setup{display:none}.android-composer{padding-bottom:6px}
+ .android-chat-scroll{padding-top:8px;gap:14px}.android-compose-box textarea{max-height:72px}
+}

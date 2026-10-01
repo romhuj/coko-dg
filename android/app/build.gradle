@@ -1,0 +1,181 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+// Official signing stays on the publisher's machine, outside the source tree.
+// Without this optional file, community release builds remain unsigned.
+def releaseSigning = new Properties()
+def signingPath = System.getenv('COKO_SIGNING_PROPERTIES')
+if (signingPath) {
+    def signingFile = new File(signingPath)
+    if (!signingFile.isFile()) throw new GradleException('COKO_SIGNING_PROPERTIES file is missing')
+    signingFile.withInputStream { releaseSigning.load(it) }
+    ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
+        if (!releaseSigning.getProperty(key)) throw new GradleException("Signing property ${key} is missing")
+    }
+}
+
+android {
+    namespace 'org.coyote.mobile'
+    compileSdk 35
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    defaultConfig {
+        applicationId 'io.github.romhuj.cokodg'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.7.0'
+        testInstrumentationRunner 'org.coyote.mobile.CoyoteTestRunner'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/mobile/assets').get().asFile
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/voiceAssets').get().asFile
+    sourceSets.main.assets.srcDir layout.buildDirectory.dir('generated/ttsAssets').get().asFile
+    signingConfigs {
+        if (signingPath) {
+            official {
+                storeFile file(releaseSigning.getProperty('storeFile'))
+                storePassword releaseSigning.getProperty('storePassword')
+                keyAlias releaseSigning.getProperty('keyAlias')
+                keyPassword releaseSigning.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            debuggable false
+            if (signingPath) signingConfig signingConfigs.official
+        }
+    }
+}
+
+// Official fixed release AAR. Models are downloaded by VoiceModel on first use,
+// individually SHA256-verified, and never included in the application package.
+def sherpaVersion = '1.13.8'
+def sherpaSha256 = '633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96'
+def sherpaAar = layout.buildDirectory.file("dependencies/sherpa-onnx-${sherpaVersion}.aar").get().asFile
+def digestFile = { File source ->
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    source.withInputStream { input ->
+        byte[] buffer = new byte[65536]
+        int count
+        while ((count = input.read(buffer)) != -1) digest.update(buffer, 0, count)
+    }
+    digest.digest().encodeHex().toString()
+}
+def prepareSherpaOnnx = tasks.register('prepareSherpaOnnx') {
+    inputs.property('version', sherpaVersion)
+    inputs.property('sha256', sherpaSha256)
+    outputs.file(sherpaAar)
+    outputs.upToDateWhen { sherpaAar.isFile() && digestFile(sherpaAar) == sherpaSha256 }
+    doLast {
+        if (sherpaAar.isFile() && digestFile(sherpaAar) == sherpaSha256) return
+        sherpaAar.parentFile.mkdirs()
+        def partial = new File(sherpaAar.parentFile, sherpaAar.name + '.part')
+        def connection = new URL("https://github.com/k2-fsa/sherpa-onnx/releases/download/v${sherpaVersion}/sherpa-onnx-${sherpaVersion}.aar").openConnection()
+        connection.connectTimeout = 30000
+        connection.readTimeout = 60000
+        connection.inputStream.withCloseable { input ->
+            partial.withOutputStream { output -> output << input }
+        }
+        if (digestFile(partial) != sherpaSha256) {
+            partial.delete()
+            throw new GradleException('sherpa-onnx AAR SHA256 mismatch; refusing the downloaded dependency')
+        }
+        java.nio.file.Files.move(partial.toPath(), sherpaAar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+def sherpaDependency = files(sherpaAar).builtBy(prepareSherpaOnnx)
+// A small verified VAD fallback avoids a separate GitHub download on the phone.
+// The 239MB ASR model remains an on-demand runtime resource, never an APK asset.
+def vadSha256 = '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6'
+def bundledVad = layout.buildDirectory.file('generated/voiceAssets/voice/silero_vad.onnx').get().asFile
+def prepareVoiceAssets = tasks.register('prepareVoiceAssets') {
+    inputs.property('sha256', vadSha256)
+    inputs.property('source', 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx')
+    outputs.file(bundledVad)
+    outputs.upToDateWhen { bundledVad.isFile() && bundledVad.length() == 643854L && digestFile(bundledVad) == vadSha256 }
+    doLast {
+        if (bundledVad.isFile() && bundledVad.length() == 643854L && digestFile(bundledVad) == vadSha256) return
+        bundledVad.parentFile.mkdirs()
+        def partial = new File(bundledVad.parentFile, bundledVad.name + '.part')
+        def connection = new URL('https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx').openConnection()
+        connection.connectTimeout = 30000
+        connection.readTimeout = 60000
+        connection.inputStream.withCloseable { input ->
+            partial.withOutputStream { output -> output << input }
+        }
+        if (partial.length() != 643854L || digestFile(partial) != vadSha256) {
+            partial.delete()
+            throw new GradleException('Silero VAD size/SHA256 mismatch; refusing the downloaded asset')
+        }
+        java.nio.file.Files.move(partial.toPath(), bundledVad.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn prepareVoiceAssets
+}
+
+// Dictionaries and phonemizer data ship in verified small packs, avoiding hundreds
+// of first-use HTTP requests. Large neural weights remain on-demand downloads.
+def ttsAssetBuilder = rootProject.file('../packaging/prepare_tts_assets.py')
+def ttsManifests = fileTree('src/main/assets/tts') { include '*.json' }
+def ttsAssetOutput = layout.buildDirectory.dir('generated/ttsAssets/tts').get().asFile
+def ttsAssetCache = layout.buildDirectory.dir('dependencies/tts-files').get().asFile
+def prepareTtsAssets = tasks.register('prepareTtsAssets', Exec) {
+    inputs.file(ttsAssetBuilder)
+    inputs.files(ttsManifests).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(ttsAssetOutput)
+    doFirst {
+        def configuredPython = providers.gradleProperty('buildPython').orNull
+        def localPython = rootProject.file('../build_release/venv/Scripts/python.exe')
+        def executable = configuredPython ?: (localPython.exists() ? localPython.absolutePath : 'python')
+        def arguments = [executable, ttsAssetBuilder.absolutePath,
+                         '--manifest-dir', file('src/main/assets/tts').absolutePath,
+                         '--output-dir', ttsAssetOutput.absolutePath,
+                         '--cache-dir', ttsAssetCache.absolutePath]
+        def localAssets = providers.gradleProperty('ttsLocalAssets').orNull
+        if (localAssets) arguments.addAll(['--local-dir', file(localAssets).absolutePath])
+        commandLine arguments
+    }
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn prepareTtsAssets
+}
+dependencies {
+    implementation sherpaDependency
+    // The release AAR exposes Kotlin classes; Java calls their public setters.
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.7.20'
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
+
+chaquopy {
+    defaultConfig {
+        version '3.12'
+        def configuredPython = providers.gradleProperty('buildPython').orNull
+        def localPython = rootProject.file('../build_release/venv/Scripts/python.exe')
+        if (configuredPython) { buildPython configuredPython }
+        else if (localPython.exists()) { buildPython localPython.absolutePath }
+        pip { install '-r', rootProject.file('requirements-android.txt').absolutePath }
+    }
+    sourceSets.main.srcDir layout.buildDirectory.dir('generated/mobile/python').get().asFile
+}
+
+def verifyMobileInputs = tasks.register('verifyMobileInputs') {
+    doLast {
+        ['python/backend/mobile_runtime.py', 'assets/runtime_seed/config/config.yaml',
+         'assets/runtime_seed/frontend/dist/index.html'].each { relative ->
+            if (!layout.buildDirectory.file("generated/mobile/${relative}").get().asFile.isFile()) {
+                throw new GradleException("Missing generated mobile input: ${relative}. Run the mobile preparation script first.")
+            }
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn verifyMobileInputs, prepareVoiceAssets, prepareTtsAssets }

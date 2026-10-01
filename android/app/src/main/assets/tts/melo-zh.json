@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "id": "melo-zh",
+  "repository": "csukuangfj/vits-melo-tts-zh_en",
+  "revision": "a0d5c6a264c0ef92d70d8661d8cc502d79627cd6",
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 1053,
+      "sha256": "88a50e5a02bbc2a5c2f084dc19da751aa97b1690f5fda76cd8005c8634d1ca70"
+    },
+    {
+      "path": "date.fst",
+      "bytes": 59154,
+      "sha256": "eb8aa079ae3cb81d8f4404992f39d61a0cb990947512b5b8d1e54d1f6980e718"
+    },
+    {
+      "path": "lexicon.txt",
+      "bytes": 6837671,
+      "sha256": "7236884b02435ac5d10cf69b4be40a61b45aa676b5300f0e412f185748fee528"
+    },
+    {
+      "path": "model.int8.onnx",
+      "bytes": 53517430,
+      "sha256": "f085f5079e05f039b800aeb542f5253c26a303211b0c6465d0d9387977855a63"
+    },
+    {
+      "path": "new_heteronym.fst",
+      "bytes": 21974,
+      "sha256": "ca14b2127e27baa571664e4bb791e143e7425f56a6bc29db08d74f97e6aa4e29"
+    },
+    {
+      "path": "number.fst",
+      "bytes": 64482,
+      "sha256": "743f402181fcfebf76cc2f0546b71fa26476e626fbe4e460fb7b4c3a7a8bd5bd"
+    },
+    {
+      "path": "phone.fst",
+      "bytes": 88630,
+      "sha256": "1ac2b6fa56b1442320c4de7db08353bab8963a2b57f365eebcdd3a2d3562f8d7"
+    },
+    {
+      "path": "tokens.txt",
+      "bytes": 655,
+      "sha256": "d18664a7e12bd7ea1022ddaf951e534e136815016c5a809d6b64156bffb4369d"
+    }
+  ],
+  "total_bytes": 60591049
+}
