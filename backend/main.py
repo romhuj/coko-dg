@@ -46,6 +46,7 @@ from .safety import SafetyError, SafetyManager
 from .content_install import ContentInstallError, install_zip_bytes
 from .character_search import CharacterSearchError, search_character
 from .role_library import save_custom_role, save_user_role, set_custom_role_pinned, delete_custom_role, validate_custom_role_deletion
+from .role_edits import role_edit_details, save_role_edit, read_role_avatar
 from .chat_requests import ChatRequests, ReceiptError
 from .chat_archive import ChatArchive, ConversationListChanged
 from .mobile_preferences import MobilePreferences
@@ -930,6 +931,25 @@ def make_app(*, mobile_token: str | None = None, mobile_port: int | None = None)
             save_device_channels(cfg, body)
         except ValueError as exc:
             return JSONResponse({"error": str(exc)}, status_code=400)
+        except OSError:
+            return JSONResponse({"error": "通道设置未能保存，请检查存储空间后重试"}, status_code=503)
+        await state.broadcast()
+        return JSONResponse({"ok": True, "device_channels": cfg["device_channels"]})
+
+    @app.post("/api/device/channel-names")
+    async def api_channel_names(body: dict) -> JSONResponse:
+        if set(body) - {"A", "B"} or not body:
+            raise HTTPException(400, "请选择 A 或 B 通道")
+        names = {}
+        for channel, value in body.items():
+            if not isinstance(value, str) or len(value.strip()) > 20 or any(ord(char) < 32 for char in value):
+                raise HTTPException(400, "通道名称须为不超过 20 字的单行文本")
+            names[channel] = {"name": value.strip() or f"{channel} 通道"}
+        try:
+            async with state.loop.conversation_edit():
+                save_device_channels(cfg, names)
+        except OSError:
+            raise HTTPException(503, "通道名称未能保存，请检查存储空间后重试") from None
         await state.broadcast()
         return JSONResponse({"ok": True, "device_channels": cfg["device_channels"]})
 
@@ -1094,6 +1114,44 @@ def make_app(*, mobile_token: str | None = None, mobile_port: int | None = None)
         character_searches[token] = (now, result)
         return JSONResponse({**result, "search_id": token})
 
+    @app.get("/api/character/edit")
+    async def api_character_edit_details(role: str) -> JSONResponse:
+        try:
+            result = role_edit_details(PROJECT_ROOT, Path(cfg["character_file"]), role)
+        except KeyError:
+            raise HTTPException(404, "角色不存在") from None
+        except (OSError, ValueError):
+            raise HTTPException(503, "角色信息暂时无法读取，请检查本地存储") from None
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/character/avatar")
+    async def api_character_avatar(role: str, v: str | None = None) -> Response:
+        try:
+            mime, data = read_role_avatar(PROJECT_ROOT, Path(cfg["character_file"]), role)
+        except KeyError:
+            raise HTTPException(404, "角色未设置头像") from None
+        except (OSError, ValueError):
+            raise HTTPException(400, "头像图片无效") from None
+        return Response(data, media_type=mime, headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"})
+
+    @app.put("/api/character/edit")
+    async def api_character_edit(body: dict) -> JSONResponse:
+        role = body.get("role")
+        try:
+            # Wait for the active turn to finish. Editing identity does not start
+            # a new chat, switch roles, or change any device/consent state.
+            async with state.loop.conversation_edit():
+                result = save_role_edit(PROJECT_ROOT, Path(cfg["character_file"]), role, body)
+                reload_character(cfg)
+        except KeyError:
+            raise HTTPException(404, "角色不存在") from None
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from None
+        except OSError:
+            raise HTTPException(503, "角色修改未能保存，请检查存储空间后重试") from None
+        await state.broadcast()
+        return JSONResponse({"ok": True, "character": result})
+
     async def create_character_response(body: dict) -> JSONResponse:
         token = str(body.get("search_id") or "")
         saved = character_searches.get(token)
@@ -1104,7 +1162,7 @@ def make_app(*, mobile_token: str | None = None, mobile_port: int | None = None)
         if isinstance(index, bool) or not isinstance(index, int) or not 0 <= index < len(sources):
             return JSONResponse({"error": "请选择一条搜索结果"}, status_code=400)
         try:
-            role = save_custom_role(PROJECT_ROOT, str(body.get("name") or sources[index]["title"]), sources[index], str(body.get("note") or ""), body.get("voiceId", "system-default"))
+            role = save_custom_role(PROJECT_ROOT, str(body.get("name") or sources[index]["title"]), sources[index], str(body.get("note") or ""), body.get("voiceId", "system-default"), body.get("avatar_data"))
             if state.mobile:
                 await stop_for_conversation_change()
             save_character_runtime(cfg, role=role, profile="角色扮演")
@@ -1139,7 +1197,7 @@ def make_app(*, mobile_token: str | None = None, mobile_port: int | None = None)
     async def api_character_custom(body: dict) -> JSONResponse:
         try:
             async with edit_character():
-                role = save_user_role(PROJECT_ROOT, body.get("name"), body.get("personality"), body.get("background", ""), body.get("voiceId", "system-default"))
+                role = save_user_role(PROJECT_ROOT, body.get("name"), body.get("personality"), body.get("background", ""), body.get("voiceId", "system-default"), body.get("avatar_data"))
                 if state.mobile:
                     await stop_for_conversation_change()
                 save_character_runtime(cfg, role=role, profile="角色扮演")

@@ -6,6 +6,8 @@ import { useApp, useChat } from "../store";
 import type { CharacterSearchResult } from "../types";
 import type { SpeechVoiceId } from "../replySpeech";
 import RoleVoiceSelect from "./RoleVoiceSelect";
+import RoleAvatarPicker from "./RoleAvatarPicker";
+import { conversationSwitchBlocked } from "../chatArchive";
 
 interface RoleSearchProps {
   onCreated: () => void;
@@ -20,13 +22,14 @@ export default function RoleSearch({ onCreated, onClose }: RoleSearchProps) {
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [voiceId, setVoiceId] = useState<SpeechVoiceId>("melo-zh");
+  const [avatar, setAvatar] = useState<string | null>(null), [imageBusy, setImageBusy] = useState(false);
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createdPending, setCreatedPending] = useState(false);
   const [error, setError] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
   const queryRef = useRef<HTMLInputElement>(null);
-  const busy = searching || creating;
+  const busy = searching || creating || imageBusy;
   const locked = busy || createdPending;
 
   useEffect(() => {
@@ -98,12 +101,13 @@ export default function RoleSearch({ onCreated, onClose }: RoleSearchProps) {
 
   const create = async () => {
     if (busy || !result || sourceIndex === null || !name.trim()) return;
+    if (isAndroid && !createdPending && conversationSwitchBlocked()) { setError("请等待当前消息完成或确认上次请求后，再创建角色。"); return; }
     setCreating(true);
     setError("");
     let saved = createdPending;
     try {
       if (!saved) {
-        await api.createCharacter(result.search_id, sourceIndex, name.trim(), note.trim(), isAndroid ? voiceId : undefined);
+        await api.createCharacter(result.search_id, sourceIndex, name.trim(), note.trim(), isAndroid ? voiceId : undefined, isAndroid ? avatar : undefined);
         saved = true;
         setCreatedPending(true);
       }
@@ -256,6 +260,7 @@ export default function RoleSearch({ onCreated, onClose }: RoleSearchProps) {
 
           {sourceIndex !== null && (
             <div className="space-y-3 border-t border-line pt-4">
+              {isAndroid && <RoleAvatarPicker id="role-search-avatar" name={name} value={avatar} disabled={locked} onChange={setAvatar} onBusyChange={setImageBusy} />}
               <div>
                 <label htmlFor="role-search-name" className="mb-2 block text-xs font-medium">角色显示名称</label>
                 <input

@@ -62,6 +62,8 @@ def _save_custom_roles(root: Path, roles: dict) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             stream.write(yaml.safe_dump({"roles": roles}, allow_unicode=True, sort_keys=False))
+            stream.flush()
+            os.fsync(stream.fileno())
         temp.replace(path)
     finally:
         temp.unlink(missing_ok=True)
@@ -127,6 +129,11 @@ def delete_custom_role(root: Path, role: str) -> dict:
     _save_custom_roles(root, roles)
     removed = False
     cleanup_pending = False
+    try:
+        from .role_edits import delete_role_edit
+        delete_role_edit(root, role)
+    except (OSError, ValueError):
+        cleanup_pending = True
     if prompt is not None:
         try:
             prompt.unlink()
@@ -144,7 +151,7 @@ def validate_custom_role_deletion(root: Path, role: str) -> None:
     _owned_prompt(root, role, _custom_role(roles, role))
 
 
-def save_user_role(root: Path, name: str, personality: str, background: str = "", voice_id: str = "system-default") -> str:
+def save_user_role(root: Path, name: str, personality: str, background: str = "", voice_id: str = "system-default", avatar_data: str | None = None) -> str:
     """Store the user's character identity without inventing Internet sources."""
     if not all(isinstance(value, str) for value in (name, personality, background)):
         raise ValueError("角色名称、性格和背景须为文本")
@@ -156,6 +163,9 @@ def save_user_role(root: Path, name: str, personality: str, background: str = ""
     if len(background) > 3000:
         raise ValueError("角色背景不能超过 3000 字")
     voice_id = validate_voice_id(voice_id)
+    if avatar_data is not None:
+        from .role_edits import avatar_bytes
+        avatar_bytes(avatar_data)
     roles = load_custom_roles(root)
     if len(roles) >= 100:
         raise ValueError("自建角色已达 100 个，请先整理角色文件")
@@ -179,14 +189,17 @@ def save_user_role(root: Path, name: str, personality: str, background: str = ""
     roles[key] = {
         "name": name, "title": name, "device_narrative": "设备反馈", "is_custom": True,
         "pinned": False, "sources": [], "creation_type": "manual",
+        "personality": personality, "background": background,
         "voiceId": voice_id,
         "profiles": {"角色扮演": {"level": "中", "note": "用户自定义的角色", "prompt_file": relative.as_posix(), "examples": []}},
     }
+    if avatar_data is not None:
+        roles[key]["avatar_data"] = avatar_data
     _save_custom_roles(root, roles)
     return key
 
 
-def save_custom_role(root: Path, name: str, source: dict, note: str = "", voice_id: str = "system-default") -> str:
+def save_custom_role(root: Path, name: str, source: dict, note: str = "", voice_id: str = "system-default", avatar_data: str | None = None) -> str:
     """Only called with a server-held search result; never fetch a user-supplied URL."""
     name = str(name).strip()
     note = str(note).strip()
@@ -195,6 +208,9 @@ def save_custom_role(root: Path, name: str, source: dict, note: str = "", voice_
     if len(note) > 1500:
         raise ValueError("补充设定不能超过 1500 字")
     voice_id = validate_voice_id(voice_id)
+    if avatar_data is not None:
+        from .role_edits import avatar_bytes
+        avatar_bytes(avatar_data)
     roles = load_custom_roles(root)
     if len(roles) >= 100:
         raise ValueError("自建角色已达 100 个，请先整理角色文件")
@@ -224,7 +240,10 @@ def save_custom_role(root: Path, name: str, source: dict, note: str = "", voice_
         "voiceId": voice_id,
         "name": name, "title": name, "device_narrative": "设备反馈", "is_custom": True, "pinned": False,
         "sources": [reference],
+        "creation_type": "search", "note": note,
         "profiles": {"角色扮演": {"level": "中", "note": note or "根据联网资料创建的角色", "prompt_file": relative.as_posix(), "examples": []}},
     }
+    if avatar_data is not None:
+        roles[key]["avatar_data"] = avatar_data
     _save_custom_roles(root, roles)
     return key

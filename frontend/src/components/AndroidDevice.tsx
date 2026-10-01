@@ -3,6 +3,7 @@ import { ChevronDown, Link2, Minus, Plus, Smartphone } from "lucide-react";
 import { api } from "../api";
 import { doResume, targets } from "../commands";
 import { useApp, useChat } from "../store";
+import { channelLabel } from "../channelNames";
 
 type Channel = "A" | "B";
 const channels: Channel[] = ["A", "B"];
@@ -103,7 +104,7 @@ export default function AndroidDevice({ onPair, manualOpen = false }: { onPair: 
 
       <div className="my-[22px] grid grid-cols-2 gap-3">
         {channels.map((ch) => <article key={ch} className="min-w-0 rounded-2xl bg-panel px-[17px] py-4">
-          <h3 className="mb-3 text-[13px] font-medium text-muted">{ch} 通道</h3>
+          <h3 className="mb-3 break-words text-[13px] font-medium text-muted">{channelLabel(ch, s?.device_channels)}</h3>
           <div className="text-[28px] font-semibold leading-tight tracking-tight tabular-nums">{s?.current?.[ch] ?? 0}<small className="ml-1 text-[13px] font-normal tracking-normal text-muted">/ {s?.effective_caps?.[ch] ?? 0}</small></div>
           <p className="mt-2 text-xs leading-[1.7] text-muted">记录值 / 上限<br /><span className="block truncate" title={s?.patterns?.[ch] || undefined}>{s?.pulse_active?.[ch] ? s.patterns?.[ch] || "播放中" : "空闲"}</span></p>
         </article>)}
@@ -135,11 +136,11 @@ export default function AndroidDevice({ onPair, manualOpen = false }: { onPair: 
             const selectedPreset = presets.some((preset) => preset.name === picked) ? picked : presets[0]?.name || "";
             const disabled = busy || estop || !paired || s?.enabled_channels?.[ch] === false;
             return <div key={ch} className="mb-[22px]">
-              <h3 className="mb-3 text-sm font-medium">{ch} 通道{s?.enabled_channels?.[ch] === false && <span className="ml-2 text-xs text-muted">已关闭</span>}</h3>
+              <h3 className="mb-3 break-words text-sm font-medium">{channelLabel(ch, s?.device_channels)}{s?.enabled_channels?.[ch] === false && <span className="ml-2 text-xs text-muted">已关闭</span>}</h3>
               <div className="grid grid-cols-2 gap-2">
-                <button type="button" disabled={disabled} aria-label={`减弱 ${ch} 通道`} title={`减弱 ${ch} 通道`} className="flex min-h-12 items-center justify-center rounded-xl border border-line disabled:opacity-35" onClick={() => void execute(ch, "add_strength", { delta: -10 })}><Minus size={22} aria-hidden="true" /></button>
-                <button type="button" disabled={disabled} aria-label={`增强 ${ch} 通道`} title={`增强 ${ch} 通道`} className="flex min-h-12 items-center justify-center rounded-xl border border-line disabled:opacity-35" onClick={() => void execute(ch, "add_strength", { delta: 10 })}><Plus size={22} aria-hidden="true" /></button>
-                <button type="button" disabled={busy || estop || !paired} className="col-span-2 min-h-12 rounded-xl border border-line text-[13px] disabled:opacity-35" aria-label={linkOn ? "停止 A/B 通道并清零" : `停止 ${ch} 通道并清零`} onClick={() => void execute(ch, "clear")}>停止并清零</button>
+                <button type="button" disabled={disabled} aria-label={`减弱 ${channelLabel(ch, s?.device_channels)}`} title={`减弱 ${channelLabel(ch, s?.device_channels)}`} className="flex min-h-12 items-center justify-center rounded-xl border border-line disabled:opacity-35" onClick={() => void execute(ch, "add_strength", { delta: -10 })}><Minus size={22} aria-hidden="true" /></button>
+                <button type="button" disabled={disabled} aria-label={`增强 ${channelLabel(ch, s?.device_channels)}`} title={`增强 ${channelLabel(ch, s?.device_channels)}`} className="flex min-h-12 items-center justify-center rounded-xl border border-line disabled:opacity-35" onClick={() => void execute(ch, "add_strength", { delta: 10 })}><Plus size={22} aria-hidden="true" /></button>
+                <button type="button" disabled={busy || estop || !paired} className="col-span-2 min-h-12 rounded-xl border border-line text-[13px] disabled:opacity-35" aria-label={linkOn ? "停止 A/B 通道并清零" : `停止 ${channelLabel(ch, s?.device_channels)}并清零`} onClick={() => void execute(ch, "clear")}>停止并清零</button>
               </div>
               <label className="mb-2 mt-4 block text-xs text-muted" htmlFor={`android-wave-${ch}`}>选择波形</label>
               <select id={`android-wave-${ch}`} value={selectedPreset} disabled={!presets.length || busy} className="min-h-12 w-full rounded-xl border border-line bg-panel px-3 text-sm text-text disabled:opacity-40" onChange={(event) => { setFocus(ch); setLastPreset(ch, event.target.value); }}>
@@ -149,7 +150,7 @@ export default function AndroidDevice({ onPair, manualOpen = false }: { onPair: 
               <button type="button" disabled={disabled || !selectedPreset} className="mt-2 min-h-12 w-full rounded-xl border border-line text-[13px] disabled:opacity-35" onClick={() => {
                 for (const target of targets(ch)) setLastPreset(target, selectedPreset);
                 void execute(ch, "pulse_hold", { pattern: selectedPreset });
-              }}>立即播放到 {linkOn ? "A/B" : ch}</button>
+              }}>立即播放到 {linkOn ? "A/B" : channelLabel(ch, s?.device_channels)}</button>
             </div>;
           })}
           {!paired && <p className="text-xs leading-relaxed text-muted">连接设备后可使用手动控制。</p>}
@@ -199,8 +200,8 @@ function CapInput({ ch }: { ch: Channel }) {
 
   return <div className="border-b border-line py-2">
     <div className="flex min-h-[51px] items-center justify-between gap-3">
-      <label className="text-sm" htmlFor={`android-cap-${ch}`}>{ch} 通道上限</label>
-      <input id={`android-cap-${ch}`} type="number" inputMode="numeric" min={1} max={hardCap} step={1} autoComplete="off" value={draft} disabled={saving || !s} aria-label={`${ch} 通道上限`} aria-describedby={`android-cap-help-${ch}`} aria-invalid={!!error} className="min-h-12 w-[94px] rounded-xl border border-line bg-panel px-3 text-right text-base tabular-nums text-text disabled:opacity-50" onChange={(event) => { dirty.current = true; setDraft(event.target.value); setError(""); }} onBlur={() => void save()} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} />
+      <label className="break-words text-sm" htmlFor={`android-cap-${ch}`}>{channelLabel(ch, s?.device_channels)}上限</label>
+      <input id={`android-cap-${ch}`} type="number" inputMode="numeric" min={1} max={hardCap} step={1} autoComplete="off" value={draft} disabled={saving || !s} aria-label={`${channelLabel(ch, s?.device_channels)}上限`} aria-describedby={`android-cap-help-${ch}`} aria-invalid={!!error} className="min-h-12 w-[94px] shrink-0 rounded-xl border border-line bg-panel px-3 text-right text-base tabular-nums text-text disabled:opacity-50" onChange={(event) => { dirty.current = true; setDraft(event.target.value); setError(""); }} onBlur={() => void save()} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} />
     </div>
     <p id={`android-cap-help-${ch}`} role={error ? "alert" : undefined} className={`pb-1 text-right text-xs ${error ? "text-bad" : "text-muted"}`}>{error || (saving ? "保存中…" : `1–${hardCap}`)}</p>
   </div>;

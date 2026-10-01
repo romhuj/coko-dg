@@ -1,7 +1,7 @@
 import { SPEECH_VOICES, type SpeechVoiceId } from "../replySpeech";
 
-export default function RoleVoiceSelect({ id, value, disabled, onChange }: {
-  id: string; value: SpeechVoiceId; disabled: boolean; onChange: (voiceId: SpeechVoiceId) => void;
+export default function RoleVoiceSelect({ id, value, disabled, onChange, includeSystem = false }: {
+  id: string; value: SpeechVoiceId; disabled: boolean; onChange: (voiceId: SpeechVoiceId) => void; includeSystem?: boolean;
 }) {
   return <div>
     <label className="android-field-label" htmlFor={id}>音色</label>
@@ -10,7 +10,7 @@ export default function RoleVoiceSelect({ id, value, disabled, onChange }: {
         const voice = SPEECH_VOICES.find((item) => item.id === event.target.value);
         if (voice) onChange(voice.id);
       }}>
-      {SPEECH_VOICES.filter((voice) => voice.provider === "offline").map((voice) => <option key={voice.id} value={voice.id}>{voice.label}</option>)}
+      {SPEECH_VOICES.filter((voice) => includeSystem || voice.provider === "offline").map((voice) => <option key={voice.id} value={voice.id}>{voice.label}</option>)}
     </select>
     <p id={`${id}-hint`} className="android-small mt-2">首次使用下载音色</p>
   </div>;

@@ -9,6 +9,9 @@ import type {
   ConversationPage,
   ConversationList,
   DevicePreferences,
+  EditableCharacter,
+  CharacterEdit,
+  ChannelDevice,
 } from "./types";
 import { useApp } from "./store";
 
@@ -102,11 +105,14 @@ export const api = {
   deleteConversation: (id: string) => j<{ deleted_id: string; active_id: string; active_changed: boolean; conversation: ConversationPage | null }>(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" }),
   pinCharacter: (role: string, pinned: boolean) => j<{ok: boolean; role: string; pinned: boolean}>("/api/character/pin", json({role, pinned})),
   deleteCharacter: (role: string) => j<{ok: boolean; deleted_role: string; role: string; profile: string}>("/api/character/delete", json({role})),
-  createCustomCharacter: (name: string, personality: string, background: string, voiceId?: string) =>
-    j<{ok: boolean; role: string; profile: string}>("/api/character/custom", json({name, personality, background, voiceId})),
+  createCustomCharacter: (name: string, personality: string, background: string, voiceId?: string, avatarData?: string | null) =>
+    j<{ok: boolean; role: string; profile: string}>("/api/character/custom", json({name, personality, background, voiceId, ...(avatarData ? { avatar_data: avatarData } : {})})),
   searchCharacter: (query: string) => j<CharacterSearchResult>("/api/character/search", json({ query })),
-  createCharacter: (searchId: string, sourceIndex: number, name: string, note: string, voiceId?: string) =>
-    j<{ ok: boolean; role: string; profile: string }>("/api/character/create", json({ search_id: searchId, source_index: sourceIndex, name, note, voiceId })),
+  createCharacter: (searchId: string, sourceIndex: number, name: string, note: string, voiceId?: string, avatarData?: string | null) =>
+    j<{ ok: boolean; role: string; profile: string }>("/api/character/create", json({ search_id: searchId, source_index: sourceIndex, name, note, voiceId, ...(avatarData ? { avatar_data: avatarData } : {}) })),
+  getEditableCharacter: (role: string) => j<EditableCharacter>(`/api/character/edit?role=${encodeURIComponent(role)}`),
+  editCharacter: (body: CharacterEdit) => j<{ ok: boolean; character: EditableCharacter }>("/api/character/edit", { ...json(body), method: "PUT" }),
+  setChannelNames: (names: Record<"A" | "B", string>) => j<{ ok: boolean; device_channels: Record<"A" | "B", ChannelDevice> }>("/api/device/channel-names", json(names)),
   manual: (action: Record<string, unknown>) =>
     j<ManualResult>("/api/manual", json(action)),
   estop: () => j<{ estop: boolean; sent: boolean }>("/api/estop", json({})),

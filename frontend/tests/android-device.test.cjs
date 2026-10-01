@@ -4,6 +4,8 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 const ts = require("typescript");
+const channelModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, "../src/channelNames.ts"), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { exports: channelModule.exports, module: channelModule });
 
 // A small hook harness exercises the component's event handlers without a device,
 // browser, network connection, or extra production/test dependencies.
@@ -45,6 +47,7 @@ function harness() {
     "react/jsx-runtime": { jsx, jsxs: jsx },
     "lucide-react": new Proxy({}, { get: (_, name) => name }),
     "../api": { api },
+    "../channelNames": channelModule.exports,
     "../store": { useApp: (select) => select(model), useChat: { getState: () => ({ push() {} }) } },
     "../commands": { targets: (ch) => model.linkOn ? ["A", "B"] : [ch], doResume: async () => { calls.push(["resume"]); } },
   };
@@ -100,7 +103,7 @@ test("wave selection is inert until explicit playback", async () => {
   find(tree, (node) => node.type === "select" && node.props.id === "android-wave-A").props.onChange({ target: { value: "导入波形" } });
   assert.equal(h.calls.length, 0);
   tree = h.render(h.Device, { onPair() {} });
-  find(tree, (node) => node.type === "button" && JSON.stringify(node.props.children) === JSON.stringify(["立即播放到 ", "A"])).props.onClick();
+  find(tree, (node) => node.type === "button" && JSON.stringify(node.props.children) === JSON.stringify(["立即播放到 ", "A 通道"])).props.onClick();
   await flush();
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0][1].pattern, "导入波形");

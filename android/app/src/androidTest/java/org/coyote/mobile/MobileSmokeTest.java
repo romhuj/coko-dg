@@ -129,6 +129,7 @@ public final class MobileSmokeTest extends InstrumentationTestCase {
             VoiceBridgeSmoke.verify(getInstrumentation(), activity, view, firstOrigin);
             SpeechBridgeSmoke.verify(getInstrumentation(), activity, view, firstOrigin);
             PairingBridgeSmoke.verify(getInstrumentation(), activity, firstOrigin);
+            FilePickerSmoke.verify(getInstrumentation(), activity, view);
             VoiceServiceSmoke.verify(getInstrumentation(), activity);
             shell("input keyevent 3");
             SystemClock.sleep(700);
@@ -360,7 +361,7 @@ public final class MobileSmokeTest extends InstrumentationTestCase {
         capture("mobile-smoke-role-actions.png");
         tapElement(view,".android-role-swipe.revealed .android-role-pin");
         assertTrue("Pin did not update the role",waitFor(view,"Boolean(("+fixture+")?.querySelector('.android-role-pinned-indicator'))",4000));
-        assertTrue("Pin request did not unlock the role",waitFor(view,"Boolean(("+fixture+")&&!(("+fixture+").querySelector('.android-role-row').disabled)&&!(("+fixture+").classList.contains('revealed')))",3000));
+        assertTrue("Pin request did not unlock the role",waitFor(view,"Boolean(("+fixture+")&&!(("+fixture+").querySelector('.android-role-select').disabled)&&!(("+fixture+").classList.contains('revealed')))",3000));
         SystemClock.sleep(200);
         execute("assert load_custom_roles(mobile_runtime._runtime.data_root)[ui_role_id]['pinned'] is True\n");
         assertEquals("Pinned role must sort first","true",evaluate(view,"document.querySelector('.android-role-list .android-role-row strong').textContent.trim()==='离线角色测试'"));
@@ -372,7 +373,7 @@ public final class MobileSmokeTest extends InstrumentationTestCase {
         boolean deleteDialogOpened=waitFor(view,"document.querySelector('.android-role-delete-dialog[role=\"dialog\"]')!==null",3000);
         String deleteDiagnostic="";
         if(!deleteDialogOpened) {
-            deleteDiagnostic=evaluate(view,"(()=>{const row="+fixture+";const button=row?.querySelector('.android-role-delete');const rect=button?.getBoundingClientRect();const hit=rect?document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2):null;return JSON.stringify({fixturePresent:!!row,revealed:!!row?.classList.contains('revealed'),rowDisabled:row?.querySelector('.android-role-row')?.disabled,deleteDisabled:button?.disabled,rowInert:!!row?.closest('[inert]'),deleteInert:!!button?.closest('[inert]'),error:document.querySelector('.android-roles .android-compose-error')?.textContent?.slice(0,300)||'',dialogs:document.querySelectorAll('[role=\"dialog\"]').length,overlays:[...document.querySelectorAll('.android-role-delete-overlay,.android-role-create-overlay,[data-coyote-sidebar]')].map(e=>({cls:e.getAttribute('class'),inert:e.inert})),hit:hit?{tag:hit.tagName,cls:hit.getAttribute('class')||'',insideDelete:!!button?.contains(hit)}:null,trace:window.__fixtureRoleTrace||[]});})()");
+            deleteDiagnostic=evaluate(view,"(()=>{const row="+fixture+";const button=row?.querySelector('.android-role-delete');const rect=button?.getBoundingClientRect();const hit=rect?document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2):null;return JSON.stringify({fixturePresent:!!row,revealed:!!row?.classList.contains('revealed'),rowDisabled:row?.querySelector('.android-role-select')?.disabled,deleteDisabled:button?.disabled,rowInert:!!row?.closest('[inert]'),deleteInert:!!button?.closest('[inert]'),error:document.querySelector('.android-roles .android-compose-error')?.textContent?.slice(0,300)||'',dialogs:document.querySelectorAll('[role=\"dialog\"]').length,overlays:[...document.querySelectorAll('.android-role-delete-overlay,.android-role-create-overlay,[data-coyote-sidebar]')].map(e=>({cls:e.getAttribute('class'),inert:e.inert})),hit:hit?{tag:hit.tagName,cls:hit.getAttribute('class')||'',insideDelete:!!button?.contains(hit)}:null,trace:window.__fixtureRoleTrace||[]});})()");
             try { capture("mobile-smoke-role-delete-failure.png"); }
             catch(Exception | AssertionError captureError) { deleteDiagnostic += "; screenshot unavailable: "+captureError.getClass().getSimpleName(); }
         }

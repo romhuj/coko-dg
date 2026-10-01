@@ -4,6 +4,8 @@
 
 **0.7.0 是本仓库的首个正式发行版。**
 
+当前 `main` 包含后续优化：通道名称、角色信息编辑与相册头像。源码构建版本仍为 0.7.0（versionCode 2），未新增发行版；已发布的 `v0.7.0` APK 保持原样。
+
 [下载 APK](https://github.com/romhuj/coko-dg/releases/latest) · [0.7.0 更新说明](RELEASE_NOTES_0.7.0.md) · [构建与完整使用说明](ANDROID.md) · [反馈](https://x.com/_Good_Dick_)
 
 ## 安装与开始使用

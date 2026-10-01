@@ -47,7 +47,19 @@ export interface RoleInfo {
   pinned?: boolean;
   manageable?: boolean;
   voiceId?: string;
+  avatar_url?: string | null;
+  editable?: boolean;
+  creation_type?: "manual" | "search" | "builtin";
   sources?: CharacterSource[];
+}
+export interface EditableCharacter {
+  role: string; name: string; kind: "manual" | "search" | "builtin";
+  personality: string; background: string; note: string; voiceId: string;
+  avatar_url: string | null; sources: CharacterSource[]; legacy_prompt_preserved: boolean;
+}
+export interface CharacterEdit {
+  role: string; name: string; personality: string; background: string; note: string; voiceId: string;
+  avatar_data?: string | null;
 }
 export interface CharacterSource {
   title: string;

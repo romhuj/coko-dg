@@ -14,6 +14,8 @@ interface Props {
   onSelect: () => void;
   onPin: () => void;
   onDelete: () => void;
+  avatarUrl?: string;
+  onEdit?: () => void;
 }
 
 export default function AndroidRoleRow(props: Props) {
@@ -51,7 +53,11 @@ export default function AndroidRoleRow(props: Props) {
       </button>
       <button type="button" disabled={props.disabled || !props.open} className="android-role-delete" aria-label={`删除${props.label}`} onClick={(event) => { event.stopPropagation(); props.onDelete(); }}><Trash2 size={19} aria-hidden="true" /><span>删除</span></button>
     </div>}
-    <button type="button" className="android-role-row" aria-pressed={props.active} disabled={props.disabled || props.selectDisabled}
+    <div className="android-role-row">
+      <button type="button" className="android-role-avatar" disabled={props.disabled || !props.onEdit} aria-label={`编辑${props.label}`} onClick={(event) => { event.stopPropagation(); if (props.open) props.onOpenChange(false); else props.onEdit?.(); }}>
+        {props.avatarUrl ? <img src={props.avatarUrl} alt="" /> : <span aria-hidden="true">{[...props.label][0]}</span>}
+      </button>
+    <button type="button" className="android-role-select" aria-pressed={props.active} disabled={props.disabled || props.selectDisabled}
       aria-expanded={props.manageable ? props.open : undefined}
       aria-description={props.manageable ? "向左滑动或按左方向键，显示置顶和删除操作" : undefined}
       onClick={() => { if (props.open) props.onOpenChange(false); else props.onSelect(); }}
@@ -61,9 +67,9 @@ export default function AndroidRoleRow(props: Props) {
           event.preventDefault(); event.stopPropagation(); props.onOpenChange(event.key === "ArrowLeft");
         }
       }}>
-      <span className="android-role-avatar" aria-hidden="true">{props.label.slice(0, 1)}</span>
       <span className="android-role-copy"><strong>{props.label}{props.pinned && <Pin size={12} className="android-role-pinned-indicator" aria-label="已置顶" />}</strong><small>{props.description}</small></span>
       {props.active ? <Check size={18} className="text-accent" aria-hidden="true" /> : <ChevronRight size={18} className="text-muted" aria-hidden="true" />}
     </button>
+    </div>
   </div>;
 }

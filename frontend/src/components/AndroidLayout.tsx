@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronRight, Menu, Octagon, Settings, Smartphone, Square, SquarePen, UserRound, UserRoundPen, Waves } from "lucide-react";
+import { ArrowLeft, Cable, ChevronRight, Menu, Octagon, Settings, Smartphone, Square, SquarePen, UserRound, UserRoundPen, Waves } from "lucide-react";
 import { api } from "../api";
 import { useApp, useChat } from "../store";
 import ChatPanel from "./ChatPanel";
@@ -9,6 +9,7 @@ import AndroidWaves from "./AndroidWaves";
 import AndroidSettings from "./AndroidSettings";
 import { PairView } from "./views";
 import AndroidNickname from "./AndroidNickname";
+import AndroidChannelNames from "./AndroidChannelNames";
 import AndroidPairingDialog from "./AndroidPairingDialog";
 import AndroidAbout from "./AndroidAbout";
 import AndroidConversationRow from "./AndroidConversationRow";
@@ -26,6 +27,7 @@ export default function AndroidLayout() {
   const [menu, setMenu] = useState(false);
   const [roleDialog, setRoleDialog] = useState(false);
   const [nickname, setNickname] = useState(false);
+  const [channelNames, setChannelNames] = useState(false);
   const [pairing, setPairing] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [historyError, setHistoryError] = useState("");
@@ -41,7 +43,7 @@ export default function AndroidLayout() {
   const listGeneration = useRef(0);
   const loadedConversation = useRef<string | undefined>(undefined);
   const startupSeen = useRef(new Set<string>());
-  const modal = roleDialog || nickname || pairing || !!managedChat;
+  const modal = roleDialog || nickname || channelNames || pairing || !!managedChat;
   const [manualOpen, setManualOpen] = useState(false);
   const [modelReady, setModelReady] = useState<boolean | null>(null);
   const [notice, setNotice] = useState("");
@@ -287,6 +289,7 @@ export default function AndroidLayout() {
         <div className="android-drawer-scroll">
           <nav aria-label="功能菜单">
             <button onClick={() => { window.dispatchEvent(new Event("coyote:voice-stop")); setMenu(false); setNickname(true); }}><UserRoundPen size={22} /><span>我的名称<small className="android-menu-nickname">{s?.config_info.player_nick || "设置称呼"}</small></span></button>
+            <button onClick={() => { window.dispatchEvent(new Event("coyote:voice-stop")); setMenu(false); setChannelNames(true); }}><Cable size={22} /><span>通道名称</span></button>
             <button onClick={() => go("角色")}><UserRound size={22} />角色</button>
             <button onClick={() => go("波形")}><Waves size={22} />波形</button>
             <button onClick={() => go("设备")}><Smartphone size={22} />设备</button>
@@ -306,6 +309,7 @@ export default function AndroidLayout() {
       </aside>
     </div>}
     {nickname && <AndroidNickname onClose={() => setNickname(false)} />}
+    {channelNames && <AndroidChannelNames onClose={() => setChannelNames(false)} />}
     {pairing && <AndroidPairingDialog onClose={() => setPairing(false)} />}
     {managedChat && <AndroidConversationDialog chat={managedChat} deleting={deletingChat} busy={historyBusy} error={managementError} active={managedChat.id === s?.conversation_id} onClose={closeManagement} onPin={() => void pinChat()} onAskDelete={() => { setDeletingChat(true); setManagementError(""); }} onDelete={() => void deleteChat()} />}
     {notice && <div className="android-toast" role="status">{notice}</div>}

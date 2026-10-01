@@ -32,12 +32,13 @@ function harness() {
     react, "react/jsx-runtime": { jsx, jsxs: jsx }, "react-dom": { createPortal: (element) => element },
     "lucide-react": new Proxy({}, { get: (_, key) => key }), "../api": { api }, "../store": { useApp, useChat },
     "../i18n": { useT: () => (text) => text },
+    "../chatArchive": { conversationSwitchBlocked: () => !!chat.busy || !!chat.awaitingConfirmation || !!chat.historyLoading },
     "../roleTheme": { ENTRIES: [], INTENSITY_LEVELS: ["低", "中", "高", "极高", "最高", "炼狱"], entryOf: () => null },
     "./RoleSearch": { default: () => null },
   };
   function loadModule(filename) {
     if (cache.has(filename)) return cache.get(filename);
-    const code = ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText;
+    const code = ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
     const module = { exports: {} };
     vm.runInNewContext(code, { exports: module.exports, module, require: (id) => {
       if (deps[id]) return deps[id];
@@ -84,6 +85,16 @@ test("right swipe closes actions; vertical scrolling and built-in rows expose no
   assert.deepEqual(changes, []);
   tree = h.render(h.Row, { ...rowProps(), manageable: false });
   assert.equal(all(tree, (node) => node.props?.className === "android-role-actions").length, 0);
+});
+
+test("avatar editing is separate from selecting a role and uses sibling buttons", () => {
+  const h = harness(), calls = [];
+  const tree = h.render(h.Row, { ...rowProps(), onEdit: () => calls.push("edit"), onSelect: () => calls.push("select"), avatarUrl: "/api/character/avatar?role=test&v=123" });
+  const avatar = find(tree, (node) => node.props?.className === "android-role-avatar");
+  const select = find(tree, (node) => node.props?.className === "android-role-select");
+  avatar.props.onClick({ stopPropagation() {} }); assert.deepEqual(calls, ["edit"]);
+  select.props.onClick(); assert.deepEqual(calls, ["edit", "select"]);
+  for (const button of all(tree, (node) => node.type === "button")) assert.equal(all(button.props.children, (node) => node.type === "button").length, 0);
 });
 
 test("pinned roles sort first; pin action updates only the chosen role", async () => {

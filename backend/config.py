@@ -12,12 +12,14 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
 
 from . import waveforms as wf_mod
 from .role_library import load_custom_roles, is_managed_custom_role, resolved_voice_id
+from .role_edits import load_role_edits, avatar_url, apply_identity_edit
 
 # 打包（PyInstaller）后以 exe 所在目录为项目根；开发时以仓库根
 if os.environ.get("DGLAB_DATA_DIR"):
@@ -297,23 +299,35 @@ def save_device_channels(cfg: Config, data: dict) -> None:
         if not isinstance(entry, dict):
             raise ValueError(f"{ch} 通道参数必须是对象")
         if "enabled" in entry:
-            clean[ch]["enabled"] = bool(entry["enabled"])
-        name = str(entry.get("name") or "").strip()
-        location = str(entry.get("location") or "").strip()
-        if name:
-            clean[ch]["name"] = name
-            clean[ch]["location"] = location
+            if type(entry["enabled"]) is not bool:
+                raise ValueError(f"{ch} 通道启用状态必须是布尔值")
+            clean[ch]["enabled"] = entry["enabled"]
+        if "name" in entry:
+            if not isinstance(entry["name"], str) or not 1 <= len(entry["name"].strip()) <= 60:
+                raise ValueError(f"{ch} 通道名称须为 1–60 字")
+            clean[ch]["name"] = entry["name"].strip()
+        if "location" in entry:
+            if not isinstance(entry["location"], str) or len(entry["location"].strip()) > 100:
+                raise ValueError(f"{ch} 通道位置须为不超过 100 字的文本")
+            clean[ch]["location"] = entry["location"].strip()
         if "baseline" in entry:
             try:
                 clean[ch]["baseline"] = max(0, min(100, int(entry["baseline"])))
             except (TypeError, ValueError):
                 raise ValueError(f"{ch} 通道基准强度必须是数字")
+    DEVICE_CHANNELS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".device_channels-", suffix=".tmp", dir=DEVICE_CHANNELS_FILE.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(yaml.safe_dump(clean, allow_unicode=True, sort_keys=False))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, DEVICE_CHANNELS_FILE)
+    finally:
+        temporary.unlink(missing_ok=True)
     cfg["device_channels"] = clean
-    DEVICE_CHANNELS_FILE.write_text(
-        yaml.safe_dump(clean, allow_unicode=True, sort_keys=False),
-        encoding="utf-8",
-    )
-    logger.info("通道配件已保存：A=%s B=%s", clean["A"], clean["B"])
+    logger.info("通道配件已保存")
 
 
 def _load_waveforms(cfg: Config) -> None:
@@ -494,6 +508,7 @@ def _load_character(path: Path) -> dict:
     # 新格式：roles.<角色>.profiles.<风格>；旧格式（平铺 profiles）包装成单角色「触手」
     roles_raw = data.get("roles")
     custom_roles = load_custom_roles(PROJECT_ROOT)
+    role_edits = load_role_edits(PROJECT_ROOT)
     if custom_roles:
         if not isinstance(roles_raw, dict) or not roles_raw:
             roles_raw = {"触手": {"name": data.get("name", "触手"), "profiles": data.get("profiles", {})}}
@@ -504,15 +519,18 @@ def _load_character(path: Path) -> dict:
             if not isinstance(rbody, dict):
                 continue
             rprofiles = rbody.get("profiles") if isinstance(rbody.get("profiles"), dict) else {}
+            edit = role_edits.get(rname, {})
             role_meta[rname] = {
-                "name": str(rbody.get("name") or rname),
+                "name": str(edit.get("name") or rbody.get("name") or rname),
                 "title": str(rbody.get("title") or "主人"),
                 "device_narrative": str(rbody.get("device_narrative") or "触手"),
                 "profiles": rprofiles,
                 "is_custom": bool(rbody.get("is_custom")),
                 "manageable": is_managed_custom_role(rname, custom_roles.get(rname)),
                 "pinned": bool(rbody.get("pinned")),
-                "voiceId": resolved_voice_id(rbody.get("voiceId")),
+                "voiceId": resolved_voice_id(edit.get("voiceId", rbody.get("voiceId"))),
+                "avatar_url": avatar_url(rname, {"avatar_data": rbody.get("avatar_data"), **edit}),
+                "creation_type": rbody.get("creation_type") or ("search" if rbody.get("sources") else "builtin"),
                 "sources": rbody.get("sources") or [],
             }
         role_names = list(role_meta)
@@ -533,6 +551,15 @@ def _load_character(path: Path) -> dict:
         role_name = "触手"
 
     meta = role_meta[role_name]
+    # Legacy flat character files use the same private display overrides.
+    for key, value in role_meta.items():
+        edit = role_edits.get(key, {})
+        if "name" in edit:
+            value["name"] = edit["name"]
+        if "voiceId" in edit:
+            value["voiceId"] = resolved_voice_id(edit["voiceId"])
+        if "avatar_data" in edit:
+            value["avatar_url"] = avatar_url(key, edit)
     profiles_map = meta["profiles"] or {}
     available_profiles = list(profiles_map) or ["默认"]
     profile_name = str(runtime.get("profile") or data.get("profile") or available_profiles[0]).strip()
@@ -566,6 +593,9 @@ def _load_character(path: Path) -> dict:
                 "manageable": bool(rmeta.get("manageable")),
                 "pinned": bool(rmeta.get("pinned")),
                 "voiceId": resolved_voice_id(rmeta.get("voiceId")),
+                "avatar_url": rmeta.get("avatar_url"),
+                "editable": True,
+                "creation_type": rmeta.get("creation_type", "builtin"),
                 "sources": rmeta.get("sources") or [],
             }
         )
@@ -601,6 +631,7 @@ def _load_character(path: Path) -> dict:
     nick = str(
         runtime.get("player_nick") or data.get("player_nick") or "小柳"
     ).strip() or "小柳"
+    prompt = apply_identity_edit(prompt, role_edits.get(role_name, {}))
 
     sel_level = next((p["level"] for p in current_profs if p["name"] == profile_name), "中")
     return {

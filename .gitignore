@@ -59,6 +59,10 @@ signing.properties
 
 # User-created roles, imports, screenshots and test recordings
 config/custom_roles.yaml
+config/role_edits.yaml
+config/role_edits.yaml.tmp
+config/.role_edits-*.tmp
+config/.device_channels-*.tmp
 config/imported-pulses/
 content/custom-roles/
 .test-artifacts/

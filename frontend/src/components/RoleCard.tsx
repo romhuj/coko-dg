@@ -8,6 +8,9 @@ import AndroidRoleRow from "./AndroidRoleRow";
 import AndroidRoleDeleteDialog from "./AndroidRoleDeleteDialog";
 import AndroidRoleCreateDialog from "./AndroidRoleCreateDialog";
 import AndroidModelJudgment from "./AndroidModelJudgment";
+import AndroidRoleEditDialog from "./AndroidRoleEditDialog";
+import { localRoleAvatar } from "../roleAvatar";
+import { conversationSwitchBlocked } from "../chatArchive";
 import {
   ENTRIES,
   INTENSITY_BADGE_CLS,
@@ -31,12 +34,15 @@ export default function RoleCard({ onSearchOpenChange }: { onSearchOpenChange?: 
   const profile = useApp((st) => st.state?.profile ?? "纯爱");
   const intensity = useApp((st) => st.state?.intensity_level ?? "中");
   const roles = useApp((st) => st.state?.roles); // 后端就绪清单（prompt 文件是否存在）
-  const chatBusy = useChat((st) => st.busy);
+  const localChatBusy = useChat((st) => st.busy || st.awaitingConfirmation || st.historyLoading);
+  const serverChatBusy = useApp((st) => !!st.state?.turn_busy || (st.state?.pending_chat ?? 0) > 0);
+  const chatBusy = localChatBusy || (isAndroid && serverChatBusy);
   const caps = useApp((st) => st.state?.effective_caps);
   const deviceLink = useApp((st) => st.state?.intensity_device_link ?? true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [judgmentOpen, setJudgmentOpen] = useState(false);
+  const [editRole, setEditRole] = useState<string | null>(null);
   const [revealedEntry, setRevealedEntry] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ role: string; label: string; active: boolean } | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -44,9 +50,9 @@ export default function RoleCard({ onSearchOpenChange }: { onSearchOpenChange?: 
   const [deleteError, setDeleteError] = useState("");
   const deletedRole = useRef<string | null>(null);
   useEffect(() => {
-    onSearchOpenChange?.(searchOpen || createOpen || !!deleteTarget || judgmentOpen);
+    onSearchOpenChange?.(searchOpen || createOpen || !!deleteTarget || judgmentOpen || !!editRole);
     return () => onSearchOpenChange?.(false);
-  }, [searchOpen, createOpen, deleteTarget, judgmentOpen, onSearchOpenChange]);
+  }, [searchOpen, createOpen, deleteTarget, judgmentOpen, editRole, onSearchOpenChange]);
   const [intensityBusy, setIntensityBusy] = useState(false);
   const [roleBusy, setRoleBusy] = useState(false);
   const [roleStatus, setRoleStatus] = useState("正在切换角色，当前回合结束后生效…");
@@ -219,7 +225,7 @@ export default function RoleCard({ onSearchOpenChange }: { onSearchOpenChange?: 
   if (isAndroid) {
     return (
       <div className="android-roles" ref={rootRef}>
-        <div inert={searchOpen || createOpen || !!deleteTarget || judgmentOpen}>
+        <div inert={searchOpen || createOpen || !!deleteTarget || judgmentOpen || !!editRole}>
         <div className="android-role-list" aria-label={t("角色入口")}>
           {androidEntries.map((entry) => {
             const active = entry.role === role && entry.profile === profile;
@@ -228,7 +234,9 @@ export default function RoleCard({ onSearchOpenChange }: { onSearchOpenChange?: 
             return (
               <AndroidRoleRow
                 key={entry.key}
-                label={t(entry.label)}
+                label={t(info?.label || entry.label)}
+                avatarUrl={localRoleAvatar(info?.avatar_url)}
+                onEdit={() => { if (!roleRequest.current && !conversationSwitchBlocked()) { setRevealedEntry(null); setEditRole(entry.role); } }}
                 description={!ready ? t("角色内容不可用") : info?.sources?.length ? t("联网创建的角色") : info?.profiles.find((item) => item.name === entry.profile)?.note || info?.title || t("结合角色性格与情景回应")}
                 active={active} disabled={chatBusy || roleBusy} selectDisabled={!ready && !active}
                 manageable={info?.manageable === true} pinned={info?.pinned === true}
@@ -274,6 +282,7 @@ export default function RoleCard({ onSearchOpenChange }: { onSearchOpenChange?: 
         </div>
         {searchOpen && <RoleSearch onClose={() => setSearchOpen(false)} onCreated={() => { setSearchOpen(false); void refreshRoles(); }} />}
         {createOpen && <AndroidRoleCreateDialog onClose={() => setCreateOpen(false)} onSearch={() => { setCreateOpen(false); setSearchOpen(true); }} onCreated={() => { setCreateOpen(false); void refreshRoles(); }} />}
+        {editRole && <AndroidRoleEditDialog role={editRole} onClose={() => setEditRole(null)} onSaved={() => { setEditRole(null); void refreshRoles(); }} />}
         {deleteTarget && <AndroidRoleDeleteDialog label={deleteTarget.label} active={deleteTarget.active} busy={deleteBusy} deleted={deleteDone} error={deleteError} onCancel={() => { if (!deleteBusy) { setDeleteTarget(null); if (deletedRole.current) void refreshRoles(); } }} onConfirm={() => void deleteEntry()} />}
       </div>
     );

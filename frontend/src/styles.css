@@ -359,6 +359,14 @@ body.coyote-android {
 .android-button.danger{color:var(--color-bad);border-color:#ff819066;background:#ff819014}
 @media(prefers-reduced-motion:reduce){.android-role-swipe .android-role-row{transition:none}}
 .android-role-avatar{width:44px;height:44px;flex:none;border-radius:50%;background:var(--color-panel);color:var(--color-accent);display:grid;place-items:center;font-size:16px}
+.android-role-avatar{overflow:hidden;min-width:44px;min-height:44px}.android-role-avatar img{width:100%;height:100%;object-fit:cover}.android-role-avatar:focus-visible{outline:2px solid var(--color-accent);outline-offset:2px}
+.android-role-select{display:flex;align-items:center;gap:10px;min-height:54px;flex:1;min-width:0;text-align:left}.android-role-copy strong{overflow-wrap:anywhere}
+.android-avatar-picker{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:8px 0 20px}.android-avatar-picker>.android-compose-error{flex-basis:100%;margin-top:0}
+.android-avatar-preview{display:grid;place-items:center;flex:none;width:80px;height:80px;border:1px solid var(--color-line);border-radius:50%;overflow:hidden;background:var(--color-panel);font-size:25px;color:var(--color-accent)}.android-avatar-preview img{width:100%;height:100%;object-fit:cover}
+.android-avatar-controls{display:flex;flex-direction:column;align-items:flex-start;gap:7px}.android-avatar-reset{display:flex;align-items:center;gap:6px;min-height:32px;padding:3px 4px;font-size:12px;color:var(--color-muted)}
+.android-dialog-layer.android-dialog-page-layer{padding:0;background:var(--color-ink)}.android-dialog.android-dialog-page{display:flex;flex-direction:column;width:100%;max-width:none;height:100%;max-height:none;padding:0;border:0;border-radius:0;background:var(--color-ink);overflow:hidden}.android-dialog.android-dialog-page h2{font-size:25px}
+.android-dialog-page-heading{display:flex;align-items:center;gap:4px;flex:none;padding:2px 22px 8px 10px}.android-dialog-page-heading h2{font-size:25px}.android-dialog-page-body{min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;padding:4px 22px 28px}
+.android-role-editor-text{resize:vertical;min-height:100px}.android-role-editor-save{width:100%;margin-top:22px}
 .android-role-copy{min-width:0;flex:1}
 .android-role-copy strong{display:block;font-size:16px;font-weight:500}
 .android-role-copy small{display:block;font-size:12px;line-height:1.7;color:var(--color-muted);margin-top:4px}

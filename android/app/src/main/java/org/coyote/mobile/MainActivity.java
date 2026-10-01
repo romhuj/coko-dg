@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 
 /** Local-origin UI with a restricted, main-frame-only speech message channel. */
 public final class MainActivity extends Activity implements RuntimeService.Listener {
-    private static final int OPEN_FILE=70, SAVE_QR=71, NOTIFICATIONS=72;
+    private static final int SAVE_QR=71, NOTIFICATIONS=72;
     private WebView web;
     private VoiceBridge voice;
     private SpeechBridge speech;
@@ -29,11 +29,11 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     private AlertDialog exitDialog;
     private final Handler main = new Handler(Looper.getMainLooper());
     private RuntimeService service;
-    private boolean bound, systemPicker, closing, destroyed, rendererGone, pageReady, backPending;
+    private boolean bound, systemPicker, closing, destroyed, rendererGone, pageReady, backPending, resumed;
     private long cookieGeneration, pageGeneration, backGeneration;
     private volatile String origin;
     private boolean pageFailed, voiceCachePreverified;
-    private ValueCallback<Uri[]> fileCallback;
+    private WebFilePicker filePicker;
     private String pendingDownload;
     private final ServiceConnection connection = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName name, IBinder binder) {
@@ -92,6 +92,10 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
         voice = new VoiceBridge(this, web);
         speech = new SpeechBridge(this, web);
         pairing = new PairingBridge(this, web);
+        filePicker = new WebFilePicker(getContentResolver(),this::startActivityForResult,new WebFilePicker.Events() {
+            @Override public void pendingChanged(boolean awaitingResult) {systemPicker=awaitingResult || pendingDownload!=null;}
+            @Override public void failed(String text) {if(!destroyed) ToastMessage.show(MainActivity.this,text);}
+        });
         WebSettings settings=web.getSettings(); settings.setJavaScriptEnabled(true); settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false); settings.setAllowContentAccess(false);
         settings.setAllowFileAccessFromFileURLs(false); settings.setAllowUniversalAccessFromFileURLs(false);
@@ -103,6 +107,7 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
         WebView.setWebContentsDebuggingEnabled(false);
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageStarted(WebView view,String url,android.graphics.Bitmap icon) {
+                if(filePicker!=null) filePicker.cancel();
                 if(voice!=null) voice.onPageStarted();
                 if(speech!=null) speech.onPageStarted();
                 if(pairing!=null) pairing.onPageStarted();
@@ -129,6 +134,7 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
                 if(request.isForMainFrame() && response.getStatusCode()>=400) { pageFailed=true; showStatus("本地服务返回错误（"+response.getStatusCode()+"）。请重试加载。",true); }
             }
             @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail) {
+                if(filePicker!=null) filePicker.cancel();
                 if(voice!=null) { voice.close(); voice=null; }
                 if(speech!=null) { speech.close(); speech=null; }
                 if(pairing!=null) { pairing.close(); pairing=null; }
@@ -142,12 +148,13 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
             @Override public void onPermissionRequest(PermissionRequest request) { request.deny(); }
             @Override public void onGeolocationPermissionsShowPrompt(String site,GeolocationPermissions.Callback callback) { callback.invoke(site,false,false); }
             @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params) {
-                if(fileCallback!=null) fileCallback.onReceiveValue(null);
-                fileCallback=callback; systemPicker=true;
-                Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,params.getMode()==FileChooserParams.MODE_OPEN_MULTIPLE);
-                try { startActivityForResult(intent,OPEN_FILE); return true; }
-                catch(ActivityNotFoundException e) { systemPicker=false; fileCallback=null; callback.onReceiveValue(null); return false; }
+                boolean trusted=pickerPageAllowed(view,true);
+                if(trusted) {
+                    // Picking a role image never keeps an active microphone or reply playback behind the picker.
+                    if(voice!=null) voice.cancel("");
+                    if(speech!=null) speech.cancel("");
+                }
+                return filePicker.open(callback,params,trusted,pageGeneration);
             }
             @Override public boolean onCreateWindow(WebView view,boolean dialog,boolean gesture,Message result) {
                 if(!gesture) return false;
@@ -178,6 +185,16 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     private boolean isLocal(Uri uri) {
         return origin!=null && "http".equalsIgnoreCase(uri.getScheme()) && "127.0.0.1".equals(uri.getHost())
             && uri.getUserInfo()==null && Uri.parse(origin).getPort()==uri.getPort();
+    }
+    private boolean pickerPageAllowed(WebView view,boolean requireResumed) {
+        return !destroyed && !rendererGone && !closing && !isFinishing() && pageReady && !pageFailed
+                && (!requireResumed || resumed) && view!=null && view==web && view.getUrl()!=null
+                && WebFilePicker.localPage(Uri.parse(view.getUrl()),origin) && screenUnlocked();
+    }
+    private boolean screenUnlocked() {
+        PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
+        KeyguardManager keyguard=(KeyguardManager)getSystemService(KEYGUARD_SERVICE);
+        return power!=null && power.isInteractive() && keyguard!=null && !keyguard.isKeyguardLocked();
     }
     private void openExternal(Uri uri) {
         String scheme=uri.getScheme();
@@ -239,6 +256,7 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
             });
     }
     private void showStatus(String text,boolean retry) {
+        if(filePicker!=null) filePicker.cancel();
         if(voice!=null) voice.cancel("");
         if(speech!=null) speech.cancel("");
         if(pairing!=null) pairing.onPageStarted();
@@ -272,6 +290,7 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     }
     @Override public void onBackPressed() { handleBack(); }
     private void signalStop() {
+        if(filePicker!=null) filePicker.cancel();
         if(voice!=null) voice.cancel("");
         if(speech!=null) speech.cancel("");
         if(pairing!=null) pairing.onPageStarted();
@@ -284,11 +303,14 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     }
     @Override protected void onResume() {
         super.onResume();
+        resumed=true;
         if(voice!=null) voice.onResume();
         if(speech!=null) speech.onResume();
         if(pairing!=null) pairing.onResume();
     }
     @Override protected void onPause() {
+        resumed=false;
+        if(!screenUnlocked() && filePicker!=null) filePicker.cancel();
         if(voice!=null) voice.onPause();
         if(speech!=null) speech.onPause();
         if(pairing!=null) pairing.onPause();
@@ -300,11 +322,11 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     }
     @Override protected void onDestroy() {
         destroyed=true;
+        if(filePicker!=null) {filePicker.close();filePicker=null;}
         if(voice!=null) { voice.close(); voice=null; }
         if(speech!=null) { speech.close(); speech=null; }
         if(pairing!=null) { pairing.close(); pairing=null; }
         main.removeCallbacksAndMessages(null);
-        if(fileCallback!=null) fileCallback.onReceiveValue(null);
         if(service!=null) service.removeListener(this);
         if(bound) unbindService(connection);
         cookieGeneration++;
@@ -314,6 +336,7 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
     private void saveQr(String url,String mime) {
         Uri uri=Uri.parse(url);
         if(!isLocal(uri) || !"/api/qrcode.png".equals(uri.getPath())) { ToastMessage.show(this,"仅支持保存本地配对二维码"); return; }
+        if(filePicker!=null) filePicker.cancel();
         pendingDownload=url; systemPicker=true;
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
             .setType("image/png").putExtra(Intent.EXTRA_TITLE,"coko DG-配对二维码.png");
@@ -321,12 +344,11 @@ public final class MainActivity extends Activity implements RuntimeService.Liste
         catch(ActivityNotFoundException e) { systemPicker=false; pendingDownload=null; ToastMessage.show(this,"系统文件保存器不可用"); }
     }
     @Override protected void onActivityResult(int request,int result,Intent data) {
-        super.onActivityResult(request,result,data); systemPicker=false;
-        if(request==OPEN_FILE && fileCallback!=null) {
-            fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result,data)); fileCallback=null;
-        }
+        super.onActivityResult(request,result,data);
+        if(filePicker!=null && filePicker.result(request,result,data,pageGeneration,()->pickerPageAllowed(web,false))) return;
         if(request==SAVE_QR) {
             String download=pendingDownload; pendingDownload=null;
+            systemPicker=filePicker!=null && filePicker.awaitingResult();
             if(result!=RESULT_OK || data==null || data.getData()==null || download==null || !isLocal(Uri.parse(download))) return;
             Uri destination=data.getData(); String cookie=CookieManager.getInstance().getCookie(download);
             java.util.concurrent.ExecutorService io=Executors.newSingleThreadExecutor();
